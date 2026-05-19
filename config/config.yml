@@ -1,0 +1,14 @@
+
+peaks:
+  peak1: [1700, 1740]
+  peak2: [670, 695]
+
+processing:
+  baseline: true
+  normalize: true
+  smoothing: false
+
+input:
+  folder: data/raw
+  indices: [0,1,2]
+  rename: ["sample1", "sample2"]
