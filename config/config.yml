@@ -10,5 +10,5 @@ processing:
 
 input:
   folder: data/raw
-  indices: [0,1,2]
-  rename: ["sample1", "sample2"]
+  indices: [0,1,2,3,4,5]
+  rename: ["mat 1", "mat 2", "mat 3", "wg 1", "wg 2", "wg 3"]

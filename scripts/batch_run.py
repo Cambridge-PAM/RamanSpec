@@ -1,5 +1,5 @@
 
-rom pathlib import Path
+from pathlib import Path
 import yaml
 
 from src.io.loader import load_files
@@ -9,6 +9,8 @@ from src.processing.normalize import auc_normalise
 from src.visualization.spectra import plot
 from src.visualization.save import save_plot
 from src.analysis.ratios import compute_ratio
+
+import pandas as pd
 
 def run_batch(config_path):
 
@@ -59,6 +61,11 @@ def run_batch(config_path):
 
         ratios["Run"] = run.name
         results_all.append(ratios)
+    
+    results_all = pd.concat(results)
+    fig_ratio = plot_ratios(df_all)
+    save_plot(fig_ratio, "batch", "ratio_comparison")
+
 
     return results_all
 
@@ -71,3 +78,5 @@ if __name__ == "__main__":
 
     print("\n=== ALL RESULTS ===")
     print(df)
+
+

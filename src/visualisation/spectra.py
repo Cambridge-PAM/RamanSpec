@@ -19,5 +19,3 @@ import matplotlib.pyplot as plt
     ax.legend()
 
     return fig
-``
-

@@ -36,4 +36,3 @@ def peak_comparison(df axes = plt.subplots(1, 3, figsize=(15,5))def peak_compari
     plt.tight_layout()
 
     return fig
-

@@ -4,6 +4,10 @@ from src.processing.baseline import psalsa_baseline
 from src.processing.normalize import auc_normalise
 from src.visualization.spectra import plot
 from src.analysis.ratios import compute_ratio
+from src.visualization.peaks import peak_comparison
+from src.visualization.ratios import plot_ratios
+from src.visualization.save import save_plot
+
 
 # -----------------------
 # SETTINGS
@@ -32,6 +36,11 @@ pipe.add(auc_normalise)
 df_proc = pipe.run(df)
 
 plot(df_proc, stacked=True)
+
+
+fig_peaks = peak_comparison(df_proc, peak1, peak2)
+save_plot(fig_peaks, "experiment", "peak_comparison")
+
 
 # -----------------------
 # ANALYSIS
