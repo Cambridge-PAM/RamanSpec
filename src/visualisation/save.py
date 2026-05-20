@@ -1,16 +1,20 @@
 from pathlib import Path
 from datetime import datetime
 
-def save_plot(fig, sample_name, plot_type, folder="outputs"):
+def save_plot(fig, experiment_name, plot_type, base_folder="outputs"):
 
-    Path(folder).mkdir(exist_ok=True)
+    # Create experiment-specific subfolder
+    output_folder = Path(base_folder) / experiment_name
+    output_folder.mkdir(parents=True, exist_ok=True)
 
+    # Timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    filename = f"{sample_name}__{plot_type}__{timestamp}.png"
+    # Filename
+    filename = f"{experiment_name}__{plot_type}__{timestamp}.png"
 
-    path = Path(folder) / filename
+    filepath = output_folder / filename
 
-    fig.savefig(path, dpi=300, bbox_inches="tight")
+    fig.savefig(filepath, dpi=300, bbox_inches="tight")
 
-    print(f"Saved: {path}")
+    print(f"Saved: {filepath}")

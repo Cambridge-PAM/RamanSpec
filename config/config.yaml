@@ -1,0 +1,29 @@
+input:
+  folder: data/raw/expt_PS22
+  indices: [0,1,2,3,4,5]
+  rename: ["mat 1", "mat 2", "mat 3", "wg 1", "wg 2", "wg 3"]
+
+plotting:
+  focus_range: [300, 3000]
+
+processing:
+  baseline: true
+  normalize: true
+  smoothing: true
+
+peaks:
+  tolerance: 5
+
+  ranges:
+    range1:
+      bounds: [630, 720]
+      peaks: [650, 669, 681, 705]
+
+    range2:
+      bounds: [1700, 1750]
+      peaks: [1720]
+
+ratios:
+  - [681, 669]
+  - [1720, 681]
+

@@ -1,6 +1,25 @@
 import matplotlib.pyplot as plt
 
-def peak_comparison(df axes = plt.subplots(1, 3, figsize=(15,5))def peak_comparison(df, peak1, peak2, padding=40):
+
+def plot_all_peaks(df_peaks):
+
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(8,5))
+
+    for sample, grp in df_peaks.groupby("Sample"):
+        ax.scatter(grp["Peak"], grp["Area"], label=sample)
+
+    ax.set_xlabel("Peak (cm⁻¹)")
+    ax.set_ylabel("Area")
+
+    ax.legend()
+    return fig
+
+
+
+def peak_comparison(df, peak1, peak2, padding=40):
+    fig, axes = plt.subplots(1, 3, figsize=(15,5))
 
     for sample, grp in df.groupby("Sample"):
 
