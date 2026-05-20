@@ -18,8 +18,9 @@ def build_voigt_model(n_peaks):
 def fit_peak_range(df, bounds, peak_centers, tolerance):
     
     results = []
+    fit_outputs = []
 
-    for sample, grp in df.groupby("Sample"):
+    for sample, grp in df.groupby("Sample"):        
 
         grp = grp.sort_values("RamanShift")
 
@@ -48,7 +49,6 @@ def fit_peak_range(df, bounds, peak_centers, tolerance):
 
         try:
             
-            fit_outputs = []
             popt, _ = curve_fit(
                 model,
                 x_fit,

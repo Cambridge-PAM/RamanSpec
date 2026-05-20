@@ -1,17 +1,28 @@
 import pybaselines as pbl
 
-def psalsa_baseline(df):
+def psalsa_baseline(df, return_baseline=False):
 
     baselineFitter = pbl.Baseline()
+    baselines = {}
 
     def apply(grp):
+
         y = grp["Intensity"].values
+
         baseline, _ = baselineFitter.psalsa(y, lam=1e6, p=0.01)
+
+        grp = grp.copy()
+
+        grp["RawIntensity"] = y 
+        grp["Baseline"] = baseline   # ✅ store baseline
 
         y_corr = y - baseline
         y_corr[y_corr < 0] = 0
 
         grp["Intensity"] = y_corr
+
         return grp
 
-    return df.groupby("Sample", group_keys=False).apply(apply)
+    df_out = df.groupby("Sample", group_keys=False).apply(apply)
+
+    return df_out

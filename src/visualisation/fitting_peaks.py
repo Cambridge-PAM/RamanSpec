@@ -7,8 +7,7 @@ def plot_peak_fit(
     fit_params,
     peak_centers,
     bounds,
-    sample_name
-):
+    sample_name):
     """
     Plot:
     - Top: data + individual peaks + total fit

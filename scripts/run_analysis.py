@@ -7,12 +7,14 @@ from src.io.loader import load_files
 from src.processing.pipeline import Pipeline
 from src.processing.baseline import psalsa_baseline
 from src.processing.normalise import auc_normalise
+from src.processing.smoothing import smooth
 
-from src.visualisation.spectra import plot
+from src.visualisation.spectra import plot, plot_with_baseline
 from src.visualisation.peaks import plot_all_peaks
 from src.visualisation.ratios import plot_ratios
 from src.visualisation.save import save_plot
 from src.visualisation.fitting_peaks import plot_peak_fit
+from src.visualisation.peak_ratio_comparison import plot_peak_ratio_comparison
 
 
 from src.fitting.peak_fitter import fit_peak_range
@@ -43,17 +45,6 @@ print(f"\n=== Loading data: {experiment_name} ===")
 df = load_files(data_folder, indices, rename)
 
 # -----------------------
-# RAW PLOT
-# -----------------------
-print("Plotting raw data...")
-
-fig_raw = plot(df)
-#plt.title("Raw Spectra")
-#plt.show()
-
-save_plot(fig_raw, experiment_name, "raw_spectra")
-
-# -----------------------
 # PROCESSING PIPELINE
 # -----------------------
 print("Applying processing pipeline...")
@@ -69,15 +60,36 @@ if processing.get("baseline", False):
 if processing.get("normalize", False):
     print(" - Normalisation")
     pipe.add(auc_normalise)
+    
+if processing.get("smoothing", False):
+    print(" - Smoothing")
+    pipe.add(smooth)
 
 df_proc = pipe.run(df)
+
+# -----------------------
+# RAW PLOT
+# -----------------------
+print("Plotting raw data...")
+
+if config["processing"].get("show_baseline", False):
+
+    fig_base, style_map = plot_with_baseline(df_proc)
+    plt.title("Baseline Correction")
+    
+    save_plot(fig_base, experiment_name, "baseline_fit")
+else:
+    fig_raw, style_map = plot(df)
+    plt.title("Raw Spectra")
+    
+    save_plot(fig_raw, experiment_name, "raw_spectra")
 
 # -----------------------
 # PROCESSED PLOT
 # -----------------------
 print("Plotting processed data...")
 
-fig_proc = plot(df_proc)
+fig_proc, style_map = plot(df_proc, style_map=style_map)
 #plt.title("Processed Spectra")
 #plt.show()
 
@@ -89,12 +101,11 @@ save_plot(fig_proc, experiment_name, "processed_spectra")
 print("Fitting peaks...")
 
 all_results = []
+all_fit_outputs = []
 
-fit_plot_counter = 0
+for range_name, r in config["peaks"]["ranges"].items():
 
-for name, r in config["peaks"]["ranges"].items():
-
-    print(f" - Fitting {name}: {r['bounds']}")
+    print(f"\n--- Fitting {range_name} ({r['bounds']}) ---")
 
     results, fit_outputs = fit_peak_range(
         df_proc,
@@ -104,29 +115,46 @@ for name, r in config["peaks"]["ranges"].items():
     )
 
     all_results.extend(results)
+    all_fit_outputs.extend(fit_outputs) 
 
-    # -----------------------
-    # PLOT FITS (NEW)
-    # -----------------------
+    # ✅ LOOP OVER EVERY SAMPLE FIT
     for fit in fit_outputs:
 
+        sample = fit["Sample"]
+        
         fig = plot_peak_fit(
             df_proc,
             fit["params"],
             fit["peaks"],
             fit["bounds"],
-            fit["Sample"]
+            sample
         )
 
-        if fig is not None:
+        if fig is None:
+            print('none')
+            continue
 
-            #plt.show()
+        # ✅ UNIQUE NAME PER FIT
+        plot_name = f"{range_name}__{sample}"
 
-            plot_name = f"{name}_{fit['Sample']}"
-            save_plot(fig, experiment_name, f"fit_{plot_name}")
+        save_plot(fig, experiment_name, f"fit_{plot_name}")
 
 
+# -----------------------
+# COMPARE KEY PEAKS
+# -----------------------
 df_peaks = pd.DataFrame(all_results)
+
+print("Plotting fitted peak comparisons...")
+
+fig_compare, style_map = plot_peak_ratio_comparison(
+    all_fit_outputs,
+    config["ratios"],
+    config["peaks"]["tolerance"],
+    style_map=style_map
+)
+
+save_plot(fig_compare, experiment_name, "peak_ratio_comparison")
 
 # -----------------------
 # PEAK AREA PLOT
@@ -157,7 +185,7 @@ print(df_ratios)
 # -----------------------
 print("Plotting ratios...")
 
-fig_ratio = plot_ratios(df_ratios)
+fig_ratio, style_map = plot_ratios(df_ratios, style_map=style_map)
 #plt.title("Peak Ratios")
 #plt.show()
 

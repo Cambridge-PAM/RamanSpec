@@ -8,7 +8,7 @@ from src.processing.baseline import psalsa_baseline
 from src.processing.normalise import auc_normalise
 from src.processing.smoothing import smooth
 
-from src.visualisation.spectra import plot
+from src.visualisation.spectra import plot,plot_with_baseline
 
 # -----------------------
 # LOAD CONFIG
@@ -34,16 +34,6 @@ df = load_files(
     config["input"].get("indices"),
     config["input"].get("rename")
 )
-
-# -----------------------
-# RAW PLOT
-# -----------------------
-print("Plotting raw data...")
-
-fig_raw = plot(df, focus_range=FOCUS_RANGE)
-plt.title("RAW DATA")
-
-plt.show()   # ✅ interactive window
 
 # -----------------------
 # BUILD PIPELINE
@@ -73,6 +63,18 @@ if processing.get("smoothing", False):
 # -----------------------
 df_proc = pipe.run(df)
 
+# -----------------------
+# RAW PLOT
+# -----------------------
+print("Plotting raw data...")
+
+if config["processing"].get("show_baseline", True):
+    fig_base, color_map = plot_with_baseline(df_proc, focus_range=FOCUS_RANGE)
+    plt.title("Baseline Correction")
+else:
+    fig_raw, color_map = plot(df, focus_range=FOCUS_RANGE)
+    plt.title("Raw Spectra")
+    
 # -----------------------
 # PROCESSED PLOT
 # -----------------------
