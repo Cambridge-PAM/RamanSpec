@@ -1,0 +1,14 @@
+
+# Ignore data
+data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.venv
+
+# OS
+.DS_Store
