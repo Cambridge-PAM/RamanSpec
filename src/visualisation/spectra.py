@@ -1,17 +1,15 @@
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button, CheckButtons, RadioButtons
 from src.visualisation.style import build_style_map
 
-
-
-
-def plot(df, style_map = None, focus_range=None):
+def plot(df, offset_step=None, style_map = None, focus_range=None):
 
     fig, ax = plt.subplots(figsize=(10,5))
 
     if style_map is None:
         style_map = build_style_map(df["Sample"].unique())
 
-    for sample, grp in df.groupby("Sample"):
+    for i, (sample, grp) in enumerate(df.groupby("Sample")):
 
         grp = grp.sort_values("RamanShift")
 
@@ -24,6 +22,11 @@ def plot(df, style_map = None, focus_range=None):
             y = y[mask]
             
         style = style_map[sample]
+        
+        
+        # ✅ apply offset
+        if offset_step is not None:
+            y = y + i * offset_step
 
         ax.plot(
             x,
@@ -73,5 +76,3 @@ def plot_with_baseline(df, style_map=None, focus_range=None):
     ax.legend()
 
     return fig, style_map
-
-

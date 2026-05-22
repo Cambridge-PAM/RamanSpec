@@ -29,12 +29,20 @@ def load_files(folder, indices=None, rename=None):
             data["X_um"] -= data["X_um"].min()
             data["Y_um"] -= data["Y_um"].max()
 
+            # Assign unique sample names for each position
+            data["Sample"] = data.apply(
+                lambda row: f"{rename[i] if rename else file}_X{row['X_um']:.2f}_Y{row['Y_um']:.2f}",
+                axis=1
+            )
+
         else:
             raise ValueError(f"Unexpected format: {file}")
 
-        sample_name = rename[i] if rename else file
-
-        data["Sample"] = sample_name
+        # For non-positional data, assign a single sample name
+        if "Sample" not in data.columns:
+            sample_name = rename[i] if rename else file
+            data["Sample"] = sample_name
+            
         df_all = pd.concat([df_all, data], ignore_index=True)
 
     return df_all

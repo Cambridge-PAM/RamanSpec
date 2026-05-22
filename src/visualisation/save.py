@@ -11,7 +11,7 @@ def save_plot(fig, experiment_name, plot_type, base_folder="outputs"):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Filename
-    filename = f"{experiment_name}__{plot_type}__{timestamp}.png"
+    filename = f"{experiment_name}__{plot_type}.png"
 
     filepath = output_folder / filename
 

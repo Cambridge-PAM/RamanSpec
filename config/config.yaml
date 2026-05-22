@@ -1,10 +1,13 @@
 input:
-  folder: data/raw/expt_PS22
-  indices: [0,1,2,3,4,5]
-  rename: ["mat 1", "mat 2", "mat 3", "wg 1", "wg 2", "wg 3"]
+  folder: data/raw/expt_AFMIRblend
+  indices: [0]
+  rename: ['WEL']
 
 plotting:
   focus_range: [300, 3000]
+  offset:
+      enabled: true
+      step: 0.0012  # vertical offset between spectra
 
 processing:
   baseline: true

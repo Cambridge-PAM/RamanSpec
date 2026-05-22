@@ -8,7 +8,7 @@ from src.processing.baseline import psalsa_baseline
 from src.processing.normalise import auc_normalise
 from src.processing.smoothing import smooth
 
-from src.visualisation.spectra import plot,plot_with_baseline
+from src.visualisation.plot_interactive_widgets import plot_interactive_with_widgets
 
 # -----------------------
 # LOAD CONFIG
@@ -21,7 +21,6 @@ with open("config/config.yaml") as f:
 # -----------------------
 experiment_path = config["input"]["folder"]
 experiment_name = Path(experiment_path).name
-
 FOCUS_RANGE = config.get("plotting", {}).get("focus_range", None)
 
 # -----------------------
@@ -29,58 +28,11 @@ FOCUS_RANGE = config.get("plotting", {}).get("focus_range", None)
 # -----------------------
 print(f"\n=== Interactive Plot: {experiment_name} ===")
 
-df = load_files(
+df_raw = load_files(
     experiment_path,
     config["input"].get("indices"),
     config["input"].get("rename")
 )
 
-# -----------------------
-# BUILD PIPELINE
-# -----------------------
-pipe = Pipeline()
-
-processing = config.get("processing", {})
-
-if processing.get("baseline", False):
-    print("Applying baseline correction")
-    pipe.add(psalsa_baseline)
-
-if processing.get("normalize", False):
-    print("Applying normalisation")
-    pipe.add(auc_normalise)
-
-if processing.get("smoothing", False):
-    print("Applying smoothing")
-    pipe.add(
-        smooth,
-        window=processing.get("smooth_window", 7),
-        poly=processing.get("smooth_poly", 3)
-    )
-
-# -----------------------
-# PROCESS DATA
-# -----------------------
-df_proc = pipe.run(df)
-
-# -----------------------
-# RAW PLOT
-# -----------------------
-print("Plotting raw data...")
-
-if config["processing"].get("show_baseline", True):
-    fig_base, color_map = plot_with_baseline(df_proc, focus_range=FOCUS_RANGE)
-    plt.title("Baseline Correction")
-else:
-    fig_raw, color_map = plot(df, focus_range=FOCUS_RANGE)
-    plt.title("Raw Spectra")
-    
-# -----------------------
-# PROCESSED PLOT
-# -----------------------
-print("Plotting processed data...")
-
-fig_proc = plot(df_proc, focus_range=FOCUS_RANGE)
-plt.title("PROCESSED DATA")
-
-plt.show()   # ✅ interactive window
+# Plot interactively
+plot_interactive_with_widgets(df_raw)

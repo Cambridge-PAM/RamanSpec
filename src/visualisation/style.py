@@ -30,9 +30,9 @@ def build_style_map(samples):
     # -----------------------
     # COLOURS → numbers
     # -----------------------
-    cmap = cm.viridis(np.linspace(0, 1, len(prefixes)))
+    cmap = cm.viridis(np.linspace(0, 1, len(samples)))
 
-    number_color = dict(zip(prefixes, cmap))
+    number_color = dict(zip(samples, cmap))
 
     # -----------------------
     # MARKERS → prefixes
@@ -41,7 +41,7 @@ def build_style_map(samples):
 
     prefix_marker = {
         p: markers[i % len(markers)]
-        for i, p in enumerate(numbers)
+        for i, p in enumerate(prefixes)
     }
 
     # -----------------------
@@ -51,7 +51,7 @@ def build_style_map(samples):
 
     prefix_linestyle = {
         p: linestyles[i % len(linestyles)]
-        for i, p in enumerate(numbers)
+        for i, p in enumerate(prefixes)
     }
 
     # -----------------------
@@ -64,9 +64,9 @@ def build_style_map(samples):
         prefix, number = parse_sample_name(s)
 
         style_map[s] = {
-            "color": number_color[prefix],
-            "marker": prefix_marker[number],
-            "linestyle": prefix_linestyle[number]
+            "color": number_color[s],
+            "marker": prefix_marker[prefix],
+            "linestyle": prefix_linestyle[prefix]
         }
 
     return style_map

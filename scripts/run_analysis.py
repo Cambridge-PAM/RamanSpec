@@ -89,7 +89,11 @@ else:
 # -----------------------
 print("Plotting processed data...")
 
-fig_proc, style_map = plot(df_proc, style_map=style_map)
+offset_step = None
+if config["plotting"]["offset"].get("enabled", False):
+    offset_step = config["plotting"]["offset"].get("step", None)
+
+fig_proc, style_map = plot(df_proc, style_map=style_map, offset_step=offset_step)
 #plt.title("Processed Spectra")
 #plt.show()
 
