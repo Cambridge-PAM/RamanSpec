@@ -3,12 +3,9 @@ import yaml
 import matplotlib.pyplot as plt
 
 from src.io.loader import load_files
-from src.processing.pipeline import Pipeline
-from src.processing.baseline import psalsa_baseline
-from src.processing.normalise import auc_normalise
-from src.processing.smoothing import smooth
 
-from src.visualisation.plot_interactive_widgets import plot_interactive_with_widgets
+
+from src.visualisation.plot_interactive_widgets import build_app
 
 # -----------------------
 # LOAD CONFIG
@@ -35,4 +32,5 @@ df_raw = load_files(
 )
 
 # Plot interactively
-plot_interactive_with_widgets(df_raw)
+app = build_app(df_raw)
+app.servable()

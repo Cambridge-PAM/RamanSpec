@@ -14,3 +14,6 @@ dependencies:
   - pybaselines
   - seaborn
   - lmfit
+  - panel
+  - bokeh
+
