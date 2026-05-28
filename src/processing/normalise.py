@@ -12,6 +12,7 @@ def auc_normalise(df, subset=None):
         pd.DataFrame: The normalized DataFrame.
     """
     def apply(grp):
+        sample = grp.name
         y = grp["Intensity"].values
         if subset:
             # Apply subset mask
@@ -36,6 +37,7 @@ def vector_normalise(df, subset=None):
         pd.DataFrame: Normalised DataFrame.
     """
     def apply(grp):
+        sample = grp.name
         y = grp["Intensity"].values
 
         if subset:
@@ -61,6 +63,7 @@ def snv_normalise(df, subset=None):
         pd.DataFrame: Normalised DataFrame.
     """
     def apply(grp):
+        sample = grp.name
         y = grp["Intensity"].values
 
         if subset:
@@ -78,4 +81,4 @@ def snv_normalise(df, subset=None):
         grp["Intensity"] = (y - mean) / (std if std != 0 else 1)
         return grp
 
-    return df.groupby("Sample", group_keys=False).apply(apply)
+    return df.groupby("Sample", group_keys=False).apply(apply,include_groups=True)

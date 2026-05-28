@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from src.io.loader import load_files
 
 
-from src.visualisation.plot_interactive_widgets import build_app
+from src.visualisation.plot_interactive_widgets import plot_interactive_with_widgets
 
 # -----------------------
 # LOAD CONFIG
@@ -32,5 +32,4 @@ df_raw = load_files(
 )
 
 # Plot interactively
-app = build_app(df_raw)
-app.servable()
+plot_interactive_with_widgets(df_raw)

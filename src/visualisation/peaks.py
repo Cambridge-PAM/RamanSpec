@@ -8,15 +8,13 @@ def plot_all_peaks(df_peaks):
     fig, ax = plt.subplots(figsize=(8,5))
 
     for sample, grp in df_peaks.groupby("Sample"):
-        ax.scatter(grp["Peak"], grp["Area"], label=sample)
+        ax.scatter(grp["Peak"], grp["Intensity"], label=sample)
 
     ax.set_xlabel("Peak (cm⁻¹)")
-    ax.set_ylabel("Area")
+    ax.set_ylabel("Intensity")
 
     ax.legend()
     return fig
-
-
 
 def peak_comparison(df, peak1, peak2, padding=40):
     fig, axes = plt.subplots(1, 3, figsize=(15,5))

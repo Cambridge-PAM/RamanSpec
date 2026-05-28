@@ -5,6 +5,7 @@ def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
     baselines = {}
 
     def apply(grp):
+        sample = grp.name
         y = grp["Intensity"].values
 
         # Use the provided lam and p values
@@ -22,6 +23,6 @@ def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
 
         return grp
 
-    df_out = df.groupby("Sample", group_keys=False).apply(apply)
+    df_out = df.groupby("Sample", group_keys=False).apply(apply, include_groups=True)
 
     return df_out

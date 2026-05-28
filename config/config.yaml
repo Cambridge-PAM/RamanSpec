@@ -1,22 +1,25 @@
 input:
-  folder: data/raw/expt_PS22
-  indices: [0,1,2,3,4,5]
-  rename: ['mat 1', 'mat 2', 'mat 3', 'wg 1', 'wg 2', 'wg 3']
+  folder: data/raw/expt_PS22_Mapping
+  indices: [2]
+  rename: ['PS22_2 Depth']
+  
+analysistype: 'positional' # 'positional' or 'non-positional'
 
 plotting:
   focus_range: [300, 3000]
   offset:
       enabled: true
       step: 0.0012  # vertical offset between spectra
+  mappingmode: "pixel" # "pixel", "scatter", "interp" or "hybrid"
 
 processing:
   baseline: true
   normalize: true
-  smoothing: false
+  smoothing: true
   show_baseline: true
 
 peaks:
-  tolerance: 2
+  tolerance: 0.1
 
   ranges:
     range1:

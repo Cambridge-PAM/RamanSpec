@@ -17,4 +17,4 @@ def save_plot(fig, experiment_name, plot_type, base_folder="outputs"):
 
     fig.savefig(filepath, dpi=300, bbox_inches="tight")
 
-    print(f"Saved: {filepath}")
+    print(f"Saved: {plot_type}")

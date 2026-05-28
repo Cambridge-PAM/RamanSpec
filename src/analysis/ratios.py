@@ -11,8 +11,8 @@ def compute_ratios(df_peaks, ratio_pairs):
 
         for p1, p2 in ratio_pairs:
 
-            area1 = grp[grp["Peak"] == p1]["Area"]
-            area2 = grp[grp["Peak"] == p2]["Area"]
+            area1 = grp[grp["Peak"] == p1]["PeakArea"]
+            area2 = grp[grp["Peak"] == p2]["PeakArea"]
 
             if len(area1) and len(area2):
 

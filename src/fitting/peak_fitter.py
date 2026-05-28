@@ -69,11 +69,12 @@ def fit_peak_range(df, bounds, peak_centers, tolerance):
 
                 results.append({
                     "Sample": sample,
+                    "Amplitude": a,
                     "Peak": p,
                     "Center": c,
                     "Sigma": s,
                     "Gamma": g,
-                    "Area": area
+                    "PeakArea": area
                 })
 
             # ✅ ADD THIS BLOCK
