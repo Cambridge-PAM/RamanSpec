@@ -1,28 +1,25 @@
 # Raman Cope Analysis
 
-A modular, configurable Python framework for Raman spectroscopy analysis designed for reproducible, publication-quality workflows.
-
----
+A Python codebase for analysising Raman spectroscopy data, both as point spectra and area/depth maps, particularly for analysing individual peaks, peak ratio and intensity variations. Used in the context of analysising spatial variation of composition in polymer films.
 
 # 📌 Overview
 
-This repository provides a complete pipeline for analysing Raman spectroscopy data, including:
+This repository provides a complete pipeline for analysing Raman spectroscopy data, including config-driven scripts for:
+  - Bulk analysis of experimental data, e.g. peak-fitting and mapping
+  - Interactive plot to alter processing and observe variations
 
-- Data ingestion (single spectra and spatial maps)
-- Config-driven preprocessing
+Functions include:
+- Data loading (single spectra and spatial maps)
 - Multi-peak Voigt fitting
-- Peak area and centre extraction
+- Peak parameter extraction
 - Residual-based fit validation
-- Ratio calculations
-- Batch and interactive workflows
+- Fitted peak Ratio calculations
 - Automated plotting and output organisation
-
----
 
 # 📁 Repository Structure
 
 ```
-raman-cope-analysis/
+raman-spec/
 │
 ├── config/
 │   └── config.yaml          # All settings for analysis
@@ -39,7 +36,6 @@ raman-cope-analysis/
 │
 ├── scripts/
 │   ├── run_analysis.py
-│   ├── batch_run.py
 │   └── interactive_plot.py
 │
 ├── src/
@@ -68,7 +64,7 @@ data/raw/<experiment_name>/
 ### Example:
 
 ```
-data/raw/expt_PS22/
+data/raw/expt_1/
     spectrum_001.txt
     spectrum_002.txt
 ```
@@ -79,7 +75,7 @@ Each folder represents a **single experiment**.
 
 ## ✅ Supported Data Formats
 
-The loader automatically detects common Raman formats.
+The loader assumes a 2- (shift, intensity) or 4- (x,y,shift,intensity or r,z,shift,intensity) column tab-separated file as generated from a Renishaw Invia Confocal Raman microscope.
 
 ### 1. Single Spectra (2 columns)
 
@@ -103,9 +99,17 @@ X    Y    RamanShift    Intensity
 0    0    101           130
 ...
 ```
+OR
+
+```
+R    Z    RamanShift    Intensity
+0    0    100           123
+0    0    101           130
+...
+```
 
 - Includes spatial coordinates (µm)
-- Automatically normalised (X, Y shifted to origin)
+- Automatically normalised (e.g. X, Y shifted to origin)
 
 ---
 
@@ -130,38 +134,53 @@ config/config.yaml
 
 ```yaml
 input:
-  folder: data/raw/expt_PS22
-  indices: null
-  rename: null
+  folder: data/raw/expt_1
+  indices: [0,1,4,8] # extract just the files at these indices
+  rename: ['Point 1', 'Point 2', 'Point 5', 'Point 9']
+  
+analysistype: 'non-positional' # 'positional' or 'non-positional'
+
+plotting:
+  focus_range: [300, 3000]
+  offset:
+      enabled: true
+      step: 0.0012  # vertical offset between spectra
+  mappingmode: "pixel" # "pixel", "scatter", "interp" or "hybrid"
 
 processing:
   baseline: true
   normalize: true
   smoothing: false
+  show_baseline: true
 
 peaks:
-  tolerance: 5
+  tolerance: 0.5
 
   ranges:
     range1:
-      bounds: [630, 720]
-      peaks: [650, 669, 681, 705]
+      bounds: [700, 800]
+      peaks: [710,756, 780]
 
     range2:
-      bounds: [1700, 1750]
-      peaks: [1720]
+      bounds: [1680, 1750]
+      peaks: [1715]
 
 ratios:
-  - [681, 669]
-  - [1720, 681]
-
-plotting:
-  focus_range: null
+  - [1715, 756]
 ```
 
 ---
 
 # ▶️ Running the Analysis
+
+## Load environment
+```bash
+git clone https://github.com/Cambridge-PAM/RamanSpec
+cd RamanSpec
+conda env create -f environment.yml
+conda activate ramanspec-env
+```
+---
 
 ## Full analysis
 
@@ -182,16 +201,6 @@ This will:
 
 ---
 
-## Batch processing
-
-```bash
-python scripts/batch_run.py
-```
-
-Processes all folders inside `data/raw/`.
-
----
-
 ## Interactive plotting
 
 ```bash
@@ -203,27 +212,7 @@ Features:
 - Linked zoom
 - Pipeline debugging
 
----
 
-# 📊 Output Structure
-
-```
-outputs/
-    expt_PS22/
-        expt_PS22__raw_spectra__timestamp.png
-        expt_PS22__processed_spectra__timestamp.png
-        expt_PS22__peak_areas__timestamp.png
-        expt_PS22__ratios__timestamp.png
-
-        expt_PS22__fit_range1_sample1__timestamp.png
-        expt_PS22__fit_range2_sample1__timestamp.png
-
-        expt_PS22_processed.csv
-        expt_PS22_peaks.csv
-        expt_PS22_ratios.csv
-```
-
----
 
 # 🔬 Peak Fitting
 
@@ -252,26 +241,6 @@ Outputs include:
 - Table of ratios
 - Comparison plots
 
----
-
-# 🧠 Design Philosophy
-
-- Reproducible (config-driven)
-- Modular (easy to extend)
-- Transparent (visual fit validation)
-- Scalable (batch processing support)
-
----
-
-# 🚀 Future Extensions
-
-- GUI interface (Streamlit)
-- Automatic peak detection
-- Parallel processing
-- Report generation (PDF/HTML)
-
----
-
 # 👤 Author
 
-Thomas Williamson
+Tom Williamson
