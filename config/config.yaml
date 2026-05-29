@@ -1,7 +1,7 @@
 input:
   folder: data/raw/expt_PS22_Mapping
   indices: [2]
-  rename: ['PS22_2 Depth']
+  rename: ['PS22_2 Depth -ve']
   
 analysistype: 'positional' # 'positional' or 'non-positional'
 

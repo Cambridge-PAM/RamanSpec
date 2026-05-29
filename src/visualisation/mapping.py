@@ -3,20 +3,42 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from src.fitting.voigt import voigt
 
+
 # -------------------------------------------------
-# UTILITY: Extract XY from sample name
+# UTILITY: Extract coordinates (XY or RZ)
 # -------------------------------------------------
-def parse_xy(sample_name):
+def parse_coordinates(sample_name):
+    """
+    Supports:
+    - XY → _X..._Y...
+    - RZ → _R..._Z...
+    Returns: (x, y, coord_type)
+    """
+
     try:
-        x = float(sample_name.split("_X")[1].split("_")[0])
-        y = float(sample_name.split("_Y")[1])
-        return x, y
+        if "_X" in sample_name and "_Y" in sample_name:
+            x = float(sample_name.split("_X")[1].split("_")[0])
+            y = float(sample_name.split("_Y")[1])
+            return x, y, "XY"
+
+        elif "_R" in sample_name and "_Z" in sample_name:
+            r = float(sample_name.split("_R")[1].split("_")[0])
+            z = float(sample_name.split("_Z")[1])
+            return r, z, "RZ"
+
     except:
-        return None, None
+        pass
+
+    return None, None, None
 
 
 def get_base_sample_name(name):
-    return name.split("_X")[0]
+    if "_X" in name:
+        return name.split("_X")[0]
+    elif "_R" in name:
+        return name.split("_R")[0]
+    return name
+
 
 
 # -------------------------------------------------
@@ -28,7 +50,8 @@ def build_peak_param_map_from_df(df_peaks, peak, tolerance, mode):
 
     for sample, grp in df_peaks.groupby("Sample"):
 
-        x, y = parse_xy(sample)
+        
+        x, y, coord_type = parse_coordinates(sample)
         if x is None:
             continue
 
@@ -44,7 +67,7 @@ def build_peak_param_map_from_df(df_peaks, peak, tolerance, mode):
 
         records.append([x, y, val])
 
-    return np.array(records)
+    return np.array(records), coord_type
 
 
 def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance):
@@ -54,9 +77,11 @@ def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance):
 
     for sample, grp in df_peaks.groupby("Sample"):
 
-        x, y = parse_xy(sample)
+        
+        x, y, coord_type = parse_coordinates(sample)
         if x is None:
             continue
+
 
         grp = grp.copy()
         grp["diff1"] = abs(grp["Peak"] - p1)
@@ -74,7 +99,7 @@ def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance):
 
         records.append([x, y, val])
 
-    return np.array(records)
+    return np.array(records), coord_type
 
 
 # -------------------------------------------------
@@ -267,11 +292,11 @@ def build_ratio_map(fit_outputs, ratio_pair, tolerance):
         # -----------------------
         # Extract XY
         # -----------------------
-        try:
-            x_pos = float(sample.split("_X")[1].split("_")[0])
-            y_pos = float(sample.split("_Y")[1])
-        except:
-            continue  # skip non-positional
+        
+        x_pos, y_pos, coord_type = parse_coordinates(sample)
+        if x_pos is None:
+            continue
+
 
         params = fit["params"]
         peaks = fit["peaks"]
@@ -305,7 +330,7 @@ def build_ratio_map(fit_outputs, ratio_pair, tolerance):
     if len(records) == 0:
         return np.array([])
 
-    return np.array(records)
+    return np.array(records), coord_type
 
 
 # -------------------------------------------------
@@ -317,10 +342,11 @@ def build_intensity_map(dfMain):
 
     for sample, grp in dfMain.groupby("Sample"):
 
-        if "X_um" not in grp.columns:
+       
+        if not any(col in grp.columns for col in ["X_um", "R_um"]):
             continue
-
-        x_pos, y_pos = parse_xy(sample)
+        
+        x_pos, y_pos, coord_type = parse_coordinates(sample)
         if x_pos is None:
             continue
 
@@ -336,4 +362,4 @@ def build_intensity_map(dfMain):
 
         records.append([x_pos, y_pos, total_intensity])
 
-    return np.array(records)
+    return np.array(records), coord_type

@@ -41,11 +41,10 @@ def load_files(folder, indices=None, rename=None):
         elif len(data.columns) >= 4:
 
             cols = data.columns
-
             # -----------------------
             # ✅ Detect X-Y
             # -----------------------
-            if "X" in cols[0] and "Y" in cols[1]:
+            if "x" in cols[0] and "y" in cols[1]:
 
                 data.columns = ["X_um", "Y_um", "RamanShift", "Intensity"]
 
@@ -63,12 +62,11 @@ def load_files(folder, indices=None, rename=None):
             # -----------------------
             # ✅ Detect R-Z (depth)
             # -----------------------
-            elif "R" in cols[0] and "Z" in cols[1]:
+            elif "r" in cols[0] and "z" in cols[1]:
 
                 data.columns = ["R_um", "Z_um", "RamanShift", "Intensity"]
 
                 data["R_um"] -= data["R_um"].min()
-                data["Z_um"] -= data["Z_um"].min()
 
                 data["Sample"] = data.apply(
                     lambda row: f"{base_name}_R{row['R_um']:.2f}_Z{row['Z_um']:.2f}",

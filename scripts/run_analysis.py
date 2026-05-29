@@ -92,7 +92,7 @@ all_fit_outputs = []
 
 for range_name, r in config["peaks"]["ranges"].items():
 
-    print(f"\n--- Fitting {range_name} ({r['bounds']}) ---")
+    print(f"--- Fitting {range_name} ({r['bounds']}) ---")
 
     results, fit_outputs = fit_peak_range(
         df_proc,
@@ -131,7 +131,7 @@ for range_name, r in config["peaks"]["ranges"].items():
 # RATIOS
 # -----------------------
 df_peaks = pd.DataFrame(all_results)
-print("Computing ratios...")
+print("\nComputing ratios...")
 
 df_ratios = compute_ratios(
     df_peaks,
@@ -236,15 +236,15 @@ elif analysis_type == "positional":
 
         print(f"\n ==> Processing sample: {sample_name}")
 
+        print(f" => Generating peak ratio maps for {sample_name}...")
         # -----------------------
         # RATIO MAPS
         # -----------------------
         for ratio_pair in config["ratios"]:
         
             df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
-            coord_type = df_sample["CoordType"].iloc[0] if "CoordType" in df_sample.columns else "XY"
 
-            map_data = build_ratio_map_from_df(
+            map_data, coord_type = build_ratio_map_from_df(
                 df_sample,
                 ratio_pair,
                 tol
@@ -281,9 +281,8 @@ elif analysis_type == "positional":
             for mode in ["Amplitude", "Center", "Sigma", "Gamma", "PeakArea"]:
 
                 df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
-                coord_type = df_sample["CoordType"].iloc[0] if "CoordType" in df_sample.columns else "XY"
 
-                map_data = build_peak_param_map_from_df(
+                map_data, coord_type = build_peak_param_map_from_df(
                     df_sample,
                     peak,
                     tol,
@@ -309,13 +308,12 @@ elif analysis_type == "positional":
         # -----------------------
         # RAW INTENSITY MAP
         # -----------------------
-        print(f" => Generating intensity map for {sample_name}...")
+        print(f" => Generating raw intensity map for {sample_name}...")
 
         # ✅ filter df for this sample only
         df_subset = df[df["Sample"].isin(sample_labels)]
-        coord_type = df_subset["CoordType"].iloc[0] if "CoordType" in df_subset.columns else "XY"
 
-        map_data = build_intensity_map(df_subset)
+        map_data, coord_type = build_intensity_map(df_subset)
 
         fig = plot_map(
             map_data,
