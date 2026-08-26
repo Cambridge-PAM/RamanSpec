@@ -11,9 +11,9 @@ dependencies:
   - scikit-learn
   - jupyter
   - pip
+  - renishawWiRE
   - pybaselines
   - seaborn
   - lmfit
-  - panel
-  - bokeh
+  - pyyaml
 

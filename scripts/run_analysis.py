@@ -2,6 +2,7 @@ from pathlib import Path
 import yaml
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 from src.io.loader import load_files
 from src.processing.pipeline import Pipeline
@@ -46,6 +47,43 @@ rename = input_config.get("rename")
 experiment_name = Path(data_folder).name
 analysis_type = config["analysistype"]
 map_mode = config["plotting"].get("mappingmode", "pixel")
+focus_range = config["plotting"].get("focus_range")
+positional2D = config.get("positional2D", False)
+map_limits_cfg = config.get("plotting", {}).get("map_limits", {})
+use_manual_map_limits = bool(map_limits_cfg.get("enabled", False))
+manual_intensity_limits = map_limits_cfg.get("intensity")
+manual_ratio_limits = map_limits_cfg.get("ratio")
+
+map_subset_cfg = config.get("plotting", {}).get("map_subset", {})
+use_map_subset = bool(map_subset_cfg.get("enabled", False))
+subset_first_n_points = map_subset_cfg.get("first_n_points")
+
+
+def subset_map_data(map_data, coord_type, enabled, first_n_points=None):
+    if not enabled or map_data is None or len(map_data) == 0:
+        return map_data
+
+    if map_data.ndim == 1:
+        ordered = map_data
+    elif coord_type in {"XY", "RZ"} and map_data.shape[1] >= 3:
+        ordered = map_data[np.argsort(map_data[:, 1])]
+    elif coord_type == "Distance" and map_data.shape[1] >= 2:
+        ordered = map_data[np.argsort(map_data[:, 0])]
+    else:
+        ordered = map_data
+
+    n_points = len(ordered)
+
+    if first_n_points is None:
+        n_points = max(1, len(ordered) // 2)
+    else:
+        try:
+            n_points = int(first_n_points)
+        except (TypeError, ValueError):
+            n_points = max(1, len(ordered) // 2)
+
+    n_points = max(1, min(n_points, len(ordered)))
+    return ordered[:n_points]
 
 # -----------------------
 # LOAD DATA
@@ -59,6 +97,21 @@ if not isPositional and analysis_type == "positional":
     print("⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis.")   
     analysis_type = "non-positional"
     
+# -----------------------
+# HANDLE LINE SCAN (positional2D)
+# -----------------------
+if positional2D and isPositional:
+    print("⚙️  Treating positional data as a line scan (2D)...")
+    # Calculate cumulative distance for line scan
+    if "X_um" in df.columns and "Y_um" in df.columns:
+        df["Distance"] = np.sqrt((df["X_um"] - df["X_um"].iloc[0])**2 + (df["Y_um"] - df["Y_um"].iloc[0])**2)
+    elif "R_um" in df.columns and "Z_um" in df.columns:
+        df["Distance"] = np.sqrt((df["R_um"] - df["R_um"].iloc[0])**2 + (df["Z_um"] - df["Z_um"].iloc[0])**2)
+    else:
+        raise ValueError("Positional2D requires X/Y or R/Z coordinates to calculate distance.")
+    # Replace positional columns with Distance for plotting
+    df = df.drop(columns=["X_um", "Y_um", "R_um", "Z_um"], errors="ignore")
+
 # -----------------------
 # PROCESSING PIPELINE
 # -----------------------
@@ -135,7 +188,9 @@ print("\nComputing ratios...")
 
 df_ratios = compute_ratios(
     df_peaks,
-    config["ratios"]
+    config["ratios"],
+    df_spectrum=df,  # Pass the full spectrum DataFrame
+    intensity_threshold=config["peaks"].get("intensity_threshold", 100)  # Default threshold is 100
 )
 
 #print("\n=== RATIOS ===")
@@ -147,7 +202,7 @@ if analysis_type == "non-positional":
     # RAW PLOT
     # -----------------------
     print("Plotting raw data...")
-    fig_raw, style_map = plot(df)
+    fig_raw, style_map = plot(df,focus_range=focus_range)
     plt.title("Raw Spectra")
 
     save_plot(fig_raw, experiment_name, "raw_spectra")
@@ -186,6 +241,7 @@ if analysis_type == "non-positional":
     # PEAK INTENSITY PLOT
     # -----------------------
     print("Plotting peak intensities...")
+    print(df_peaks)
 
     fig_peak = plot_all_peaks(df_peaks)
     #plt.title("Peak Intensities")
@@ -247,17 +303,27 @@ elif analysis_type == "positional":
             map_data, coord_type = build_ratio_map_from_df(
                 df_sample,
                 ratio_pair,
-                tol
+                tol,
+                df_spectrum=df,  # Pass the full spectrum DataFrame
+                intensity_threshold=config["peaks"].get("intensity_threshold", 100)  # Default threshold is 100
             )
+            map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
             
             print(f" [-] {sample_name}, {ratio_pair} → map points:", len(map_data))
             
+            ratio_vmin = None
+            ratio_vmax = None
+            if use_manual_map_limits and manual_ratio_limits is not None:
+                ratio_vmin, ratio_vmax = manual_ratio_limits
+
             fig = plot_map(
                 map_data,
                 title=f"{sample_name}: {ratio_pair[0]} / {ratio_pair[1]} Raman Shift (cm⁻¹) Peak Ratio",
                 label="Ratio",
                 plotmode=map_mode,
-                coord_type=coord_type
+                coord_type="Distance" if positional2D else coord_type,
+                vmin=ratio_vmin,
+                vmax=ratio_vmax
             )
 
 
@@ -278,7 +344,7 @@ elif analysis_type == "positional":
 
         for peak in target_peaks:
 
-            for mode in ["Amplitude", "Center", "Sigma", "Gamma", "PeakArea"]:
+            for mode in ["Amplitude", "Center", "Sigma", "Gamma", "PeakArea", "BaselineIntensity"]:
 
                 df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
 
@@ -288,13 +354,14 @@ elif analysis_type == "positional":
                     tol,
                     mode
                 )
+                map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
 
                 fig = plot_map(
                     map_data,
                     title=f"{sample_name}: {peak} cm⁻¹ ({mode})",
                     label=mode,
                     plotmode=map_mode,
-                    coord_type=coord_type
+                    coord_type="Distance" if positional2D else coord_type
                 )
 
                 if fig:
@@ -312,15 +379,23 @@ elif analysis_type == "positional":
 
         # ✅ filter df for this sample only
         df_subset = df[df["Sample"].isin(sample_labels)]
-
+        
         map_data, coord_type = build_intensity_map(df_subset)
+        map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
+
+        intensity_vmin = None
+        intensity_vmax = None
+        if use_manual_map_limits and manual_intensity_limits is not None:
+            intensity_vmin, intensity_vmax = manual_intensity_limits
 
         fig = plot_map(
             map_data,
             title=f"{sample_name}: Integrated Intensity",
             label="AUC",
             plotmode=map_mode,
-            coord_type=coord_type
+            coord_type="Distance" if positional2D else coord_type,
+            vmin=intensity_vmin,
+            vmax=intensity_vmax
         )
 
         if fig:

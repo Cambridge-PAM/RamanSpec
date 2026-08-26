@@ -31,7 +31,7 @@ def load_files(folder, indices=None, rename=None):
         # -------------------------------------------------
         if len(data.columns) == 2:
 
-            data.columns = ["ramanshift", "intensity"]
+            data.columns = ["RamanShift", "Intensity"]
             data["Sample"] = base_name
             data["CoordType"] = "none"
 
@@ -48,8 +48,8 @@ def load_files(folder, indices=None, rename=None):
 
                 data.columns = ["X_um", "Y_um", "RamanShift", "Intensity"]
 
-                data["X_um"] -= data["X_um"].min()
-                data["Y_um"] -= data["Y_um"].max()
+                data["X_um"] #-= data["X_um"].min()
+                data["Y_um"] #-= data["Y_um"].max()
 
                 data["Sample"] = data.apply(
                     lambda row: f"{base_name}_X{row['X_um']:.2f}_Y{row['Y_um']:.2f}",

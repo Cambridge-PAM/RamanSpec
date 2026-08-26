@@ -30,7 +30,7 @@ def build_style_map(samples):
     # -----------------------
     # COLOURS → numbers
     # -----------------------
-    cmap = cm.viridis(np.linspace(0, 1, len(samples)))
+    cmap = cm.viridis(np.linspace(0, 1, len(samples)+1))
 
     number_color = dict(zip(samples, cmap))
 

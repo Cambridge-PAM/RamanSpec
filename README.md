@@ -1,10 +1,10 @@
-# Raman Cope Analysis
+# Raman Spectra Analysis
 
-A Python codebase for analysising Raman spectroscopy data, both as point spectra and area/depth maps, particularly for analysing individual peaks, peak ratio and intensity variations. Used in the context of analysising spatial variation of composition in polymer films.
+A Python codebase for analysing Raman spectra, both as point spectra and area/depth maps, particularly for analysing individual peaks, peak ratios and intensity variations. Used in our research group in the context of analysing spatial variation of composition in polymer films.
 
 # 📌 Overview
 
-This repository provides a complete pipeline for analysing Raman spectroscopy data, including config-driven scripts for:
+This repository provides a pipeline for analysing Raman spectroscopy data, including config-driven scripts for:
   - Bulk analysis of experimental data, e.g. peak-fitting and mapping
   - Interactive plot to alter processing and observe variations
 

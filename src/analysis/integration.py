@@ -16,6 +16,6 @@ def integrate_region(df, region):
 
         area = np.trapz(y, x) if len(x) else 0
 
-        results.append({"Sample": sample, "Area": area})
+        results.append({"Sample": sample, "AUC": area})
 
     return results
