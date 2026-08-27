@@ -90,6 +90,35 @@ def subset_map_data(map_data, coord_type, enabled, first_n_points=None):
     n_points = max(1, min(n_points, len(ordered)))
     return ordered[:n_points]
 
+
+def select_nonpositional_points(spectrum_df, point_indices=None, point_names=None):
+    if point_indices is None:
+        return spectrum_df
+
+    point_labels = list(spectrum_df["Sample"].drop_duplicates())
+    selected_indices = list(point_indices)
+
+    if any(index < 0 or index >= len(point_labels) for index in selected_indices):
+        raise IndexError(
+            f"nonpositional_indices must refer to points from 0 to {len(point_labels) - 1}."
+        )
+
+    selected_labels = [point_labels[index] for index in selected_indices]
+    selected_df = spectrum_df[spectrum_df["Sample"].isin(selected_labels)].copy()
+
+    if point_names is not None:
+        point_names = list(point_names)
+        if len(point_names) != len(selected_labels):
+            raise ValueError(
+                "nonpositional_rename must contain one name for each "
+                "nonpositional_indices entry."
+            )
+
+        rename_map = dict(zip(selected_labels, point_names))
+        selected_df["Sample"] = selected_df["Sample"].map(rename_map)
+
+    return selected_df
+
 # -----------------------
 # LOAD DATA
 # -----------------------
@@ -101,6 +130,14 @@ isPositional = any(col in df.columns for col in ["X_um", "Y_um", "R_um", "Z_um"]
 if not isPositional and analysis_type == "positional":
     print("⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis.")   
     analysis_type = "non-positional"
+
+if analysis_type == "non-positional" and isPositional:
+    df = select_nonpositional_points(
+        df,
+        config.get("nonpositional_indices"),
+        config.get("nonpositional_rename")
+    )
+    print(f"Selected {df['Sample'].nunique()} non-positional points.")
     
 # -----------------------
 # HANDLE LINE SCAN (positional2D)
