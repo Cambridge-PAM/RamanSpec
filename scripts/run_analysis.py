@@ -14,6 +14,7 @@ from src.processing.pipeline import Pipeline
 from src.processing.baseline import psalsa_baseline
 from src.processing.normalise import auc_normalise
 from src.processing.smoothing import smooth
+from src.processing.crop import crop_map_edges
 
 from src.visualisation.spectra import plot
 from src.visualisation.peaks import plot_all_peaks
@@ -127,6 +128,13 @@ print(f"\n=== Loading data: {experiment_name} ===")
 df = load_files(data_folder, indices, rename)
 
 isPositional = any(col in df.columns for col in ["X_um", "Y_um", "R_um", "Z_um"])
+
+crop_cfg = config.get("processing", {}).get("crop_edge_pixels", {})
+if isPositional and crop_cfg.get("enabled", False):
+    crop_pixels = crop_cfg.get("pixels", 1)
+    print(f"✂️  Cropping {crop_pixels} outer pixel(s) from positional map edges...")
+    df = crop_map_edges(df, crop_pixels)
+
 if not isPositional and analysis_type == "positional":
     print(
         "⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis."
