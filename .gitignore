@@ -1,5 +1,6 @@
 
 # Ignore data
+config/
 data/
 outputs/
 
@@ -11,9 +12,6 @@ __pycache__/
 .env
 .venv
 settings.json
-
-# Config
-.yaml
 
 # OS
 .DS_Store
