@@ -30,9 +30,8 @@ from src.visualisation.mapping import (
     build_ratio_map_from_df,
     build_peak_param_map_from_df,
     build_intensity_map,
-    plot_map
+    plot_map,
 )
-
 
 # -----------------------
 # LOAD CONFIG
@@ -119,6 +118,7 @@ def select_nonpositional_points(spectrum_df, point_indices=None, point_names=Non
 
     return selected_df
 
+
 # -----------------------
 # LOAD DATA
 # -----------------------
@@ -128,17 +128,17 @@ df = load_files(data_folder, indices, rename)
 
 isPositional = any(col in df.columns for col in ["X_um", "Y_um", "R_um", "Z_um"])
 if not isPositional and analysis_type == "positional":
-    print("⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis.")   
+    print(
+        "⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis."
+    )
     analysis_type = "non-positional"
 
 if analysis_type == "non-positional" and isPositional:
     df = select_nonpositional_points(
-        df,
-        config.get("nonpositional_indices"),
-        config.get("nonpositional_rename")
+        df, config.get("nonpositional_indices"), config.get("nonpositional_rename")
     )
     print(f"Selected {df['Sample'].nunique()} non-positional points.")
-    
+
 # -----------------------
 # HANDLE LINE SCAN (positional2D)
 # -----------------------
@@ -146,11 +146,19 @@ if positional2D and isPositional:
     print("⚙️  Treating positional data as a line scan (2D)...")
     # Calculate cumulative distance for line scan
     if "X_um" in df.columns and "Y_um" in df.columns:
-        df["Distance"] = np.sqrt((df["X_um"] - df["X_um"].iloc[0])**2 + (df["Y_um"] - df["Y_um"].iloc[0])**2)
+        df["Distance"] = np.sqrt(
+            (df["X_um"] - df["X_um"].iloc[0]) ** 2
+            + (df["Y_um"] - df["Y_um"].iloc[0]) ** 2
+        )
     elif "R_um" in df.columns and "Z_um" in df.columns:
-        df["Distance"] = np.sqrt((df["R_um"] - df["R_um"].iloc[0])**2 + (df["Z_um"] - df["Z_um"].iloc[0])**2)
+        df["Distance"] = np.sqrt(
+            (df["R_um"] - df["R_um"].iloc[0]) ** 2
+            + (df["Z_um"] - df["Z_um"].iloc[0]) ** 2
+        )
     else:
-        raise ValueError("Positional2D requires X/Y or R/Z coordinates to calculate distance.")
+        raise ValueError(
+            "Positional2D requires X/Y or R/Z coordinates to calculate distance."
+        )
     # Replace positional columns with Distance for plotting
     df = df.drop(columns=["X_um", "Y_um", "R_um", "Z_um"], errors="ignore")
 
@@ -170,7 +178,7 @@ if processing.get("baseline", False):
 if processing.get("normalize", False):
     print(" - Normalisation")
     pipe.add(auc_normalise)
-    
+
 if processing.get("smoothing", False):
     print(" - Smoothing")
     pipe.add(smooth)
@@ -190,31 +198,24 @@ for range_name, r in config["peaks"]["ranges"].items():
     print(f"--- Fitting {range_name} ({r['bounds']}) ---")
 
     results, fit_outputs = fit_peak_range(
-        df_proc,
-        r["bounds"],
-        r["peaks"],
-        config["peaks"]["tolerance"]
+        df_proc, r["bounds"], r["peaks"], config["peaks"]["tolerance"]
     )
 
     all_results.extend(results)
-    all_fit_outputs.extend(fit_outputs) 
+    all_fit_outputs.extend(fit_outputs)
 
     # ✅ LOOP OVER EVERY SAMPLE FIT
     if analysis_type == "non-positional":
         for fit in fit_outputs:
 
             sample = fit["Sample"]
-            
+
             fig = plot_peak_fit(
-                df_proc,
-                fit["params"],
-                fit["peaks"],
-                fit["bounds"],
-                sample
+                df_proc, fit["params"], fit["peaks"], fit["bounds"], sample
             )
 
             if fig is None:
-                print('none')
+                print("none")
                 continue
 
             # ✅ UNIQUE NAME PER FIT
@@ -232,11 +233,13 @@ df_ratios = compute_ratios(
     df_peaks,
     config["ratios"],
     df_spectrum=df,  # Pass the full spectrum DataFrame
-    intensity_threshold=config["peaks"].get("intensity_threshold", 100)  # Default threshold is 100
+    intensity_threshold=config["peaks"].get(
+        "intensity_threshold", 100
+    ),  # Default threshold is 100
 )
 
-#print("\n=== RATIOS ===")
-#print(df_ratios)
+# print("\n=== RATIOS ===")
+# print(df_ratios)
 
 
 if analysis_type == "non-positional":
@@ -244,7 +247,10 @@ if analysis_type == "non-positional":
     # RAW PLOT
     # -----------------------
     print("Plotting raw data...")
-    fig_raw, style_map = plot(df,focus_range=focus_range)
+    fig_raw, style_map = plot(
+        df,
+        focus_range=focus_range,
+    )
     plt.title("Raw Spectra")
 
     save_plot(fig_raw, experiment_name, "raw_spectra")
@@ -258,12 +264,18 @@ if analysis_type == "non-positional":
     if config["plotting"]["offset"].get("enabled", False):
         offset_step = config["plotting"]["offset"].get("step", None)
 
-    fig_proc, style_map = plot(df_proc, style_map=style_map, offset_step=offset_step)
-    #plt.title("Processed Spectra")
-    #plt.show()
+    fig_proc, style_map = plot(
+        df_proc,
+        style_map=style_map,
+        offset_step=offset_step,
+        focus_range=focus_range,
+        detect_peaks=True,
+    )
+    # plt.title("Processed Spectra")
+    # plt.show()
 
     save_plot(fig_proc, experiment_name, "processed_spectra")
-    
+
     # -----------------------
     # COMPARE KEY PEAKS
     # -----------------------
@@ -274,7 +286,7 @@ if analysis_type == "non-positional":
         all_fit_outputs,
         config["ratios"],
         config["peaks"]["tolerance"],
-        style_map=style_map
+        style_map=style_map,
     )
 
     save_plot(fig_compare, experiment_name, "peak_ratio_comparison")
@@ -286,8 +298,8 @@ if analysis_type == "non-positional":
     print(df_peaks)
 
     fig_peak = plot_all_peaks(df_peaks)
-    #plt.title("Peak Intensities")
-    #plt.show()
+    # plt.title("Peak Intensities")
+    # plt.show()
 
     save_plot(fig_peak, experiment_name, "peak_area")
 
@@ -296,13 +308,13 @@ if analysis_type == "non-positional":
     # -----------------------
     print("Plotting ratios")
     fig_ratio, style_map = plot_ratios(df_ratios, style_map=style_map)
-    #plt.title("Peak Ratios")
-    #plt.show()
+    # plt.title("Peak Ratios")
+    # plt.show()
 
     save_plot(fig_ratio, experiment_name, "ratios")
 
 elif analysis_type == "positional":
-    
+
     print("\n=== Generating positional maps ===")
 
     tol = config["peaks"]["tolerance"]
@@ -339,7 +351,7 @@ elif analysis_type == "positional":
         # RATIO MAPS
         # -----------------------
         for ratio_pair in config["ratios"]:
-        
+
             df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
 
             map_data, coord_type = build_ratio_map_from_df(
@@ -347,12 +359,16 @@ elif analysis_type == "positional":
                 ratio_pair,
                 tol,
                 df_spectrum=df,  # Pass the full spectrum DataFrame
-                intensity_threshold=config["peaks"].get("intensity_threshold", 100)  # Default threshold is 100
+                intensity_threshold=config["peaks"].get(
+                    "intensity_threshold", 100
+                ),  # Default threshold is 100
             )
-            map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
-            
+            map_data = subset_map_data(
+                map_data, coord_type, use_map_subset, subset_first_n_points
+            )
+
             print(f" [-] {sample_name}, {ratio_pair} → map points:", len(map_data))
-            
+
             ratio_vmin = None
             ratio_vmax = None
             if use_manual_map_limits and manual_ratio_limits is not None:
@@ -365,17 +381,15 @@ elif analysis_type == "positional":
                 plotmode=map_mode,
                 coord_type="Distance" if positional2D else coord_type,
                 vmin=ratio_vmin,
-                vmax=ratio_vmax
+                vmax=ratio_vmax,
             )
-
 
             if fig:
                 save_plot(
                     fig,
                     experiment_name,
-                    f"{sample_name}_ratio_map_{ratio_pair[0]}_{ratio_pair[1]}"
+                    f"{sample_name}_ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
                 )
-
 
         # -----------------------
         # PEAK PARAMETER MAPS
@@ -386,33 +400,34 @@ elif analysis_type == "positional":
 
         for peak in target_peaks:
 
-            for mode in ["Amplitude", "Center", "Sigma", "Gamma", "PeakArea", "BaselineIntensity"]:
+            for mode in [
+                "Amplitude",
+                "Center",
+                "Sigma",
+                "Gamma",
+                "PeakArea",
+                "BaselineIntensity",
+            ]:
 
                 df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
 
                 map_data, coord_type = build_peak_param_map_from_df(
-                    df_sample,
-                    peak,
-                    tol,
-                    mode
+                    df_sample, peak, tol, mode
                 )
-                map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
+                map_data = subset_map_data(
+                    map_data, coord_type, use_map_subset, subset_first_n_points
+                )
 
                 fig = plot_map(
                     map_data,
                     title=f"{sample_name}: {peak} cm⁻¹ ({mode})",
                     label=mode,
                     plotmode=map_mode,
-                    coord_type="Distance" if positional2D else coord_type
+                    coord_type="Distance" if positional2D else coord_type,
                 )
 
                 if fig:
-                    save_plot(
-                        fig,
-                        experiment_name,
-                        f"{sample_name}_{mode}_map_{peak}"
-                    )
-
+                    save_plot(fig, experiment_name, f"{sample_name}_{mode}_map_{peak}")
 
         # -----------------------
         # RAW INTENSITY MAP
@@ -421,9 +436,11 @@ elif analysis_type == "positional":
 
         # ✅ filter df for this sample only
         df_subset = df[df["Sample"].isin(sample_labels)]
-        
+
         map_data, coord_type = build_intensity_map(df_subset)
-        map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
+        map_data = subset_map_data(
+            map_data, coord_type, use_map_subset, subset_first_n_points
+        )
 
         intensity_vmin = None
         intensity_vmax = None
@@ -437,15 +454,11 @@ elif analysis_type == "positional":
             plotmode=map_mode,
             coord_type="Distance" if positional2D else coord_type,
             vmin=intensity_vmin,
-            vmax=intensity_vmax
+            vmax=intensity_vmax,
         )
 
         if fig:
-            save_plot(
-                fig,
-                experiment_name,
-                f"{sample_name}_intensity_map"
-            )
+            save_plot(fig, experiment_name, f"{sample_name}_intensity_map")
 
 # -----------------------
 # SAVE DATA
