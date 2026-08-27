@@ -11,9 +11,10 @@ dependencies:
   - scikit-learn
   - jupyter
   - pip
-  - renishawWiRE
   - pybaselines
   - seaborn
   - lmfit
   - pyyaml
+  - pip:
+      - renishawWiRE
 
