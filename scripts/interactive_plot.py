@@ -1,4 +1,9 @@
 from pathlib import Path
+import sys
+
+# Add parent directory to path so src module can be imported
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import yaml
 import matplotlib.pyplot as plt
 
