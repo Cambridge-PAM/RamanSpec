@@ -1,4 +1,6 @@
 from pathlib import Path
+from datetime import datetime
+import subprocess
 import sys
 
 # Add parent directory to path so src module can be imported
@@ -473,6 +475,40 @@ elif analysis_type == "positional":
 # -----------------------
 output_folder = Path("outputs") / experiment_name
 output_folder.mkdir(parents=True, exist_ok=True)
+
+
+def _git(*args):
+    try:
+        return subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=Path(__file__).resolve().parent.parent,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+git_commit = _git("rev-parse", "HEAD") or "unknown"
+git_branch = _git("rev-parse", "--abbrev-ref", "HEAD") or "unknown"
+git_dirty = _git("status", "--porcelain")
+if git_dirty is None:
+    dirty_note = "unknown"
+else:
+    dirty_note = "yes (uncommitted changes)" if git_dirty else "no"
+
+with open(output_folder / "metadata.txt", "w", encoding="utf-8") as f:
+    f.write("RamanSpec analysis metadata\n")
+    f.write("===========================\n")
+    f.write(f"Run time: {datetime.now().isoformat(timespec='seconds')}\n")
+    f.write(f"Experiment: {experiment_name}\n")
+    f.write(f"Git commit: {git_commit}\n")
+    f.write(f"Git branch: {git_branch}\n")
+    f.write(f"Uncommitted changes: {dirty_note}\n")
+    f.write("\nconfig.yaml parameters\n")
+    f.write("----------------------\n")
+    yaml.safe_dump(config, f, sort_keys=False, default_flow_style=False)
 
 # df_proc.to_csv(output_folder / f"{experiment_name}_processed.csv", index=False)
 # df_peaks.to_csv(output_folder / f"{experiment_name}_peaks.csv", index=False)
