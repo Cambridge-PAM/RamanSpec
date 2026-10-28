@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import datetime
+import os
 import subprocess
 import re
 import sys
@@ -57,6 +58,31 @@ if not Path(data_folder).is_dir():
     raise FileNotFoundError(f"Data folder not found: {data_folder}")
 indices = input_config.get("indices")
 rename = input_config.get("rename")
+
+# Several indices: analyse each file in turn as a separate run (child process per file)
+_job = os.environ.get("RAMANSPEC_JOB")
+if _job is not None:
+    _idx, _, _name = _job.partition("|")
+    indices = [int(_idx)]
+    rename = [_name] if _name else None
+else:
+    _all_files = sorted(f for f in os.listdir(data_folder) if f.endswith(".txt"))
+    _idx_list = list(range(len(_all_files))) if indices is None else list(indices)
+    if rename and len(rename) != len(_idx_list):
+        raise ValueError(
+            "input.rename must contain one name for each input.indices entry."
+        )
+    if len(_idx_list) > 1:
+        for _k, _i in enumerate(_idx_list):
+            _label = rename[_k] if rename else ""
+            print(f"\n##### File {_k + 1}/{len(_idx_list)}: index {_i} {_label} #####")
+            subprocess.run(
+                [sys.executable, str(Path(__file__).resolve())],
+                env={**os.environ, "RAMANSPEC_JOB": f"{_i}|{_label}"},
+                cwd=os.getcwd(),
+                check=True,
+            )
+        sys.exit(0)
 
 experiment_name = Path(data_folder).name
 analysis_type = config["analysistype"]
