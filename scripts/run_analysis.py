@@ -158,8 +158,6 @@ if analysis_type == "non-positional" and isPositional:
 
 # Label from the config renames (as applied), used on figures and in filenames
 _names = list(rename or [])
-if analysis_type == "non-positional" and isPositional:
-    _names = list(config.get("nonpositional_rename") or _names)
 rename_label = "_".join(re.sub(r'[<>:"/\\|?*\s]+', "-", str(n)) for n in _names)
 file_prefix = f"{experiment_name}_{rename_label}" if rename_label else experiment_name
 
