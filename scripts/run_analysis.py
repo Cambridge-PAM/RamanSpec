@@ -47,7 +47,13 @@ with open("config/config.yaml", encoding="utf-8") as f:
 # -----------------------
 input_config = config["input"]
 
-data_folder = input_config["folder"]
+base_path = input_config.get("base_path")
+# An absolute "folder" overrides base_path; with no base_path, "folder" is relative to the repo
+data_folder = (
+    Path(base_path) / input_config["folder"] if base_path else input_config["folder"]
+)
+if not Path(data_folder).is_dir():
+    raise FileNotFoundError(f"Data folder not found: {data_folder}")
 indices = input_config.get("indices")
 rename = input_config.get("rename")
 
