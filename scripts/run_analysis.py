@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 import subprocess
+import re
 import sys
 
 # Add parent directory to path so src module can be imported
@@ -154,6 +155,32 @@ if analysis_type == "non-positional" and isPositional:
         df, config.get("nonpositional_indices"), config.get("nonpositional_rename")
     )
     print(f"Selected {df['Sample'].nunique()} non-positional points.")
+
+# Label from the config renames (as applied), used on figures and in filenames
+_names = list(rename or [])
+if analysis_type == "non-positional" and isPositional:
+    _names = list(config.get("nonpositional_rename") or _names)
+rename_label = "_".join(re.sub(r'[<>:"/\\|?*\s]+', "-", str(n)) for n in _names)
+file_prefix = f"{experiment_name}_{rename_label}" if rename_label else experiment_name
+
+_save_plot = save_plot
+
+
+def save_plot(fig, experiment_name, plot_type, **kwargs):
+    if rename_label:
+        fig.text(
+            0.01,
+            0.995,
+            ", ".join(map(str, _names)),
+            ha="left",
+            va="bottom",
+            fontsize=8,
+            color="gray",
+        )
+    return _save_plot(
+        fig, experiment_name, plot_type, file_prefix=file_prefix, **kwargs
+    )
+
 
 # -----------------------
 # HANDLE LINE SCAN (positional2D)
@@ -504,7 +531,7 @@ if git_dirty is None:
 else:
     dirty_note = "yes (uncommitted changes)" if git_dirty else "no"
 
-with open(output_folder / "metadata.txt", "w", encoding="utf-8") as f:
+with open(output_folder / f"{file_prefix}_metadata.txt", "w", encoding="utf-8") as f:
     f.write("RamanSpec analysis metadata\n")
     f.write("===========================\n")
     f.write(f"Run time: {datetime.now().isoformat(timespec='seconds')}\n")
