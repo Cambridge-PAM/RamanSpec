@@ -31,9 +31,7 @@ FOCUS_RANGE = config.get("plotting", {}).get("focus_range", None)
 print(f"\n=== Interactive Plot: {experiment_name} ===")
 
 df_raw = load_files(
-    experiment_path,
-    config["input"].get("indices"),
-    config["input"].get("rename")
+    experiment_path, config["input"].get("indices"), config["input"].get("rename")
 )
 
 # Plot interactively

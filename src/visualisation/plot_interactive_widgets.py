@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
 import seaborn as sns
+
 sns.set_theme(style="whitegrid")
 
 from matplotlib.widgets import Button, RadioButtons, CheckButtons, TextBox
@@ -64,7 +65,7 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
         )
 
     cached_df = None
-    
+
     def process():
         global cached_df
 
@@ -84,10 +85,7 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
                 df = smooth(df, **smoothing_params)
 
             if toggles["normalisation"]:
-                df = NORMALISERS[state["normalisation"]](
-                    df,
-                    subset=tuple(norm_range)
-                )
+                df = NORMALISERS[state["normalisation"]](df, subset=tuple(norm_range))
 
         # update cache
         last_params.clear()
@@ -100,7 +98,7 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
     # PLOT
     # -----------------------
     lines = {}
-    
+
     def draw(preserve_zoom=True):
         # -----------------------
         # Store X zoom only
@@ -172,9 +170,6 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
 
         fig.canvas.draw_idle()
 
-        
-
-
     # -----------------------
     # CALLBACKS
     # -----------------------
@@ -211,6 +206,7 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
             except:
                 box.ax.set_facecolor("#f7d4d4")
             fig.canvas.draw_idle()
+
         return f
 
     def update_int(box, key, container, cond=lambda x: True):
@@ -226,6 +222,7 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
             except:
                 box.ax.set_facecolor("#f7d4d4")
             fig.canvas.draw_idle()
+
         return f
 
     # -----------------------
@@ -237,28 +234,29 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
 
     # ---- MODE ----
     widgets["mode"] = RadioButtons(
-        fig.add_axes([0.02, 0.75, 0.25, 0.15]),
-        ["Raw", "Processed"]
+        fig.add_axes([0.02, 0.75, 0.25, 0.15]), ["Raw", "Processed"]
     )
     widgets["mode"].on_clicked(set_mode)
 
     # ---- SAMPLES ----
     widgets["samples"] = RadioButtons(
-        fig.add_axes([0.02, 0.5, 0.25, 0.25]),
-        list(df_raw["Sample"].unique())
+        fig.add_axes([0.02, 0.5, 0.25, 0.25]), list(df_raw["Sample"].unique())
     )
     widgets["samples"].on_clicked(toggle_line)
 
     # ---- NORMALISATION ----
     widgets["norm"] = RadioButtons(
-        fig.add_axes([0.02, 0.3, 0.12, 0.15]),
-        ["AUC", "Vector", "SNV"]
+        fig.add_axes([0.02, 0.3, 0.12, 0.15]), ["AUC", "Vector", "SNV"]
     )
     widgets["norm"].on_clicked(set_norm)
 
     # norm range
-    widgets["norm_min"] = TextBox(fig.add_axes([0.15, 0.35, 0.12, 0.05]), "min", initial=str(x_min))
-    widgets["norm_max"] = TextBox(fig.add_axes([0.15, 0.3, 0.12, 0.05]), "max", initial=str(x_max))
+    widgets["norm_min"] = TextBox(
+        fig.add_axes([0.15, 0.35, 0.12, 0.05]), "min", initial=str(x_min)
+    )
+    widgets["norm_max"] = TextBox(
+        fig.add_axes([0.15, 0.3, 0.12, 0.05]), "max", initial=str(x_max)
+    )
 
     widgets["norm_min"].on_submit(
         update_float(widgets["norm_min"], 0, norm_range, lambda x: x < norm_range[1])
@@ -280,29 +278,30 @@ def plot_interactive_with_widgets(df_raw, style_map=None):
 
     # ---- SMOOTHING ----
     widgets["win"] = TextBox(fig.add_axes([0.02, 0.1, 0.12, 0.05]), "win", initial="7")
-    widgets["poly"] = TextBox(fig.add_axes([0.15, 0.1, 0.12, 0.05]), "poly", initial="3")
+    widgets["poly"] = TextBox(
+        fig.add_axes([0.15, 0.1, 0.12, 0.05]), "poly", initial="3"
+    )
 
     widgets["win"].on_submit(
-        update_int(widgets["win"], "window", smoothing_params,
-                   lambda x: x > 1 and x % 2 == 1)
+        update_int(
+            widgets["win"], "window", smoothing_params, lambda x: x > 1 and x % 2 == 1
+        )
     )
     widgets["poly"].on_submit(
-        update_int(widgets["poly"], "poly", smoothing_params,
-                   lambda x: x >= 1)
+        update_int(widgets["poly"], "poly", smoothing_params, lambda x: x >= 1)
     )
 
     # ---- PROCESS TOGGLES ----
     widgets["proc"] = CheckButtons(
         fig.add_axes([0.02, 0.02, 0.25, 0.07]),
         ["baseline", "smoothing", "normalisation"],
-        [True, True, True]
+        [True, True, True],
     )
     widgets["proc"].on_clicked(toggle_proc)
 
     # ---- BASELINE BUTTON ----
     widgets["baseline_btn"] = Button(
-        fig.add_axes([0.02, 0.9, 0.25, 0.05]),
-        "Toggle Baseline"
+        fig.add_axes([0.02, 0.9, 0.25, 0.05]), "Toggle Baseline"
     )
     widgets["baseline_btn"].on_clicked(toggle_baseline)
 

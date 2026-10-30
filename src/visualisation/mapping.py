@@ -40,7 +40,6 @@ def get_base_sample_name(name):
     return name
 
 
-
 # -------------------------------------------------
 # Map Builders
 # -------------------------------------------------
@@ -76,7 +75,9 @@ def build_peak_param_map_from_df(df_peaks, peak, tolerance, mode):
     return np.array(records), coord_type
 
 
-def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance, df_spectrum, intensity_threshold=100):
+def build_ratio_map_from_df(
+    df_peaks, ratio_pair, tolerance, df_spectrum, intensity_threshold=100
+):
     """
     Build a ratio map from the DataFrame of peaks, ensuring the total spectral integrated intensity is above a threshold.
 
@@ -119,7 +120,9 @@ def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance, df_spectrum, intens
 
         # Skip if total intensity is below the threshold
         if total_intensity < intensity_threshold:
-            records.append([x_pos, y_pos, 0] if coord_type != "Distance" else [x_pos, 0])
+            records.append(
+                [x_pos, y_pos, 0] if coord_type != "Distance" else [x_pos, 0]
+            )
             continue
 
         # Match peaks and calculate ratio
@@ -131,7 +134,11 @@ def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance, df_spectrum, intens
 
         if peak1["diff1"] > tolerance or peak2["diff2"] > tolerance:
             val = 0.0
-        elif not np.isfinite(peak1["PeakArea"]) or not np.isfinite(peak2["PeakArea"]) or peak2["PeakArea"] == 0:
+        elif (
+            not np.isfinite(peak1["PeakArea"])
+            or not np.isfinite(peak2["PeakArea"])
+            or peak2["PeakArea"] == 0
+        ):
             val = 0.0
         else:
             val = peak1["PeakArea"] / peak2["PeakArea"]
@@ -140,7 +147,9 @@ def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance, df_spectrum, intens
             else:
                 val = float(np.nan_to_num(val, nan=0.0, posinf=0.0, neginf=0.0))
 
-        records.append([x_pos, y_pos, val] if coord_type != "Distance" else [x_pos, val])
+        records.append(
+            [x_pos, y_pos, val] if coord_type != "Distance" else [x_pos, val]
+        )
 
     if len(records) == 0:
         return np.array([]), coord_type
@@ -152,6 +161,7 @@ def build_ratio_map_from_df(df_peaks, ratio_pair, tolerance, df_spectrum, intens
 # PLOT SCATTER MAP (BASE)
 # -------------------------------------------------
 
+
 def plot_map(
     map_data,
     title,
@@ -161,7 +171,7 @@ def plot_map(
     coord_type="XY",
     vmin=None,
     vmax=None,
-    depth_direction="positive" 
+    depth_direction="positive",
 ):
     if map_data is None or len(map_data) == 0:
         print(title, " : ⚠️ No positional data available")
@@ -191,15 +201,15 @@ def plot_map(
         sorted_indices = np.argsort(x)
         x = x[sorted_indices]
         z = z[sorted_indices]
-        
+
     if vmin == None:
         vmin = np.nanmin(z)
     if vmax == None:
         vmax = np.nanmax(z)
 
     fig = plt.figure(figsize=(8, 6))
-    
-     # =====================================================
+
+    # =====================================================
     # ✅ MODE 0: 2D LINE PLOT (Distance)
     # =====================================================
     if coord_type == "Distance":
@@ -208,7 +218,7 @@ def plot_map(
         plt.colorbar(scatter, ax=ax, label=label)
         ax.set_xlabel("Distance (µm)")
         ax.set_ylabel(label)
-        
+
     # =====================================================
     # ✅ MODE: DEPTH PLOT
     # =====================================================
@@ -223,9 +233,7 @@ def plot_map(
             y = -y
 
         # Create scatter plot
-        scatter = ax.scatter(
-            z, y, c=x, cmap=cmap, s=100, edgecolors='k', linewidth=0.4
-        )
+        scatter = ax.scatter(z, y, c=x, cmap=cmap, s=100, edgecolors="k", linewidth=0.4)
 
         ax.set_xlabel(label)
         ax.set_ylabel("Depth (Z µm)")
@@ -236,10 +244,8 @@ def plot_map(
         unique_r = np.unique(x)
         for r in unique_r:
             mask = x == r
-            ax.scatter(
-                z[mask], y[mask], label=f"R = {r:.2f} µm", s=100, edgecolors='k'
-            )
-        
+            ax.scatter(z[mask], y[mask], label=f"R = {r:.2f} µm", s=100, edgecolors="k")
+
     # =====================================================
     # ✅ MODE 1: PIXEL GRID (default, best for Raman maps)
     # =====================================================
@@ -256,13 +262,12 @@ def plot_map(
             Z[iy, ix] = zi
         im = ax.imshow(
             Z,
-            extent=(x_unique.min(), x_unique.max(),
-                    y_unique.min(), y_unique.max()),
-            origin='lower',
+            extent=(x_unique.min(), x_unique.max(), y_unique.min(), y_unique.max()),
+            origin="lower",
             cmap=cmap,
-            aspect='equal',
+            aspect="equal",
             vmin=vmin,
-            vmax=vmax
+            vmax=vmax,
         )
         plt.colorbar(im, ax=ax, label=label)
 
@@ -272,14 +277,15 @@ def plot_map(
     elif plotmode == "scatter":
         ax = fig.add_subplot(111)
         sc = ax.scatter(
-            x, y,
+            x,
+            y,
             c=z,
             cmap=cmap,
             s=80,
-            edgecolors='k',
+            edgecolors="k",
             linewidth=0.4,
             vmin=vmin,
-            vmax=vmax
+            vmax=vmax,
         )
         plt.colorbar(sc, ax=ax, label=label)
 
@@ -294,15 +300,15 @@ def plot_map(
         xi = np.linspace(min(x), max(x), 150)
         yi = np.linspace(min(y), max(y), 150)
         XI, YI = np.meshgrid(xi, yi)
-        ZI = griddata((x, y), z, (XI, YI), method='cubic')
+        ZI = griddata((x, y), z, (XI, YI), method="cubic")
         im = ax.imshow(
             ZI,
             extent=(min(x), max(x), min(y), max(y)),
-            origin='lower',
+            origin="lower",
             cmap=cmap,
-            aspect='auto',
+            aspect="auto",
             vmin=vmin,
-            vmax=vmax
+            vmax=vmax,
         )
         plt.colorbar(im, ax=ax, label=label)
 
@@ -310,16 +316,18 @@ def plot_map(
     # ✅ MODE 4: 3D PLOT
     # =====================================================
     elif plotmode == "3d":
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.add_subplot(111, projection="3d")
         sc = ax.scatter(
-            x, y, z,
+            x,
+            y,
+            z,
             c=z,
             cmap=cmap,
             s=50,
-            edgecolors='k',
+            edgecolors="k",
             linewidth=0.4,
             vmin=vmin,
-            vmax=vmax
+            vmax=vmax,
         )
         ax.set_xlabel("X (µm)" if coord_type == "XY" else "R (µm)")
         ax.set_ylabel("Y (µm)" if coord_type == "XY" else "Z (µm)")
@@ -332,11 +340,11 @@ def plot_map(
     elif plotmode == "slice":
         ax = fig.add_subplot(111)
         if coord_type == "XY":
-            ax.plot(x, z, 'o-', label="Y-Axis Slice")
+            ax.plot(x, z, "o-", label="Y-Axis Slice")
             ax.set_xlabel("X (µm)")
             ax.set_ylabel(label)
         elif coord_type == "RZ":
-            ax.plot(y, z, 'o-', label="Z-Axis Slice")
+            ax.plot(y, z, "o-", label="Z-Axis Slice")
             ax.set_xlabel("R (µm)")
             ax.set_ylabel(label)
         ax.legend()
@@ -362,7 +370,6 @@ def plot_map(
     ax.set_title(title)
     plt.tight_layout()
     return fig
-
 
 
 # -------------------------------------------------
@@ -407,7 +414,7 @@ def build_ratio_map(fit_outputs, ratio_pair, tolerance, intensity_threshold=100)
         # Get peak areas
         def get_peakarea(target):
             idx = np.argmin([abs(p - target) for p in peaks])
-            a, c, s, g = params[idx * 4:(idx + 1) * 4]
+            a, c, s, g = params[idx * 4 : (idx + 1) * 4]
             x_local = np.linspace(c - 10, c + 10, 200)
             y_local = voigt(x_local, a, c, s, g)
             return np.trapz(y_local, x_local)

@@ -1,8 +1,9 @@
 import numpy as np
 
+
 def auc_normalise(df, subset=None):
     """
-    Normalize the intensity values in the DataFrame by total area under the curve (AUC) for each sample. Assuming linear x-indices, this calculates 
+    Normalize the intensity values in the DataFrame by total area under the curve (AUC) for each sample. Assuming linear x-indices, this calculates
 
     Parameters:
         df (pd.DataFrame): The input DataFrame with columns "RamanShift" and "Intensity".
@@ -11,19 +12,23 @@ def auc_normalise(df, subset=None):
     Returns:
         pd.DataFrame: The normalized DataFrame.
     """
+
     def apply(grp):
         sample = grp.name
         y = grp["Intensity"].values
         if subset:
             # Apply subset mask
             mask = (grp["RamanShift"] >= subset[0]) & (grp["RamanShift"] <= subset[1])
-            normalization_factor = np.sum(y[mask]) if np.any(mask) else 1  # Avoid division by zero
+            normalization_factor = (
+                np.sum(y[mask]) if np.any(mask) else 1
+            )  # Avoid division by zero
         else:
             normalization_factor = np.sum(y)
         grp["Intensity"] = y / normalization_factor
         return grp
 
     return df.groupby("Sample", group_keys=False).apply(apply)
+
 
 def vector_normalise(df, subset=None):
     """
@@ -36,6 +41,7 @@ def vector_normalise(df, subset=None):
     Returns:
         pd.DataFrame: Normalised DataFrame.
     """
+
     def apply(grp):
         sample = grp.name
         y = grp["Intensity"].values
@@ -51,6 +57,7 @@ def vector_normalise(df, subset=None):
 
     return df.groupby("Sample", group_keys=False).apply(apply)
 
+
 def snv_normalise(df, subset=None):
     """
     Apply Standard Normal Variate (SNV) normalisation.
@@ -62,6 +69,7 @@ def snv_normalise(df, subset=None):
     Returns:
         pd.DataFrame: Normalised DataFrame.
     """
+
     def apply(grp):
         sample = grp.name
         y = grp["Intensity"].values
@@ -81,4 +89,4 @@ def snv_normalise(df, subset=None):
         grp["Intensity"] = (y - mean) / (std if std != 0 else 1)
         return grp
 
-    return df.groupby("Sample", group_keys=False).apply(apply,include_groups=True)
+    return df.groupby("Sample", group_keys=False).apply(apply, include_groups=True)

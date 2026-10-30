@@ -1,6 +1,6 @@
-
 import os
 import pandas as pd
+
 
 def load_files(folder, indices=None, rename=None):
 
@@ -15,11 +15,7 @@ def load_files(folder, indices=None, rename=None):
 
         path = os.path.join(folder, file)
 
-        data = pd.read_csv(
-            path,
-            sep='\s+',
-            engine="python"
-        )
+        data = pd.read_csv(path, sep="\s+", engine="python")
 
         base_name = rename[i] if rename else file
 
@@ -48,12 +44,12 @@ def load_files(folder, indices=None, rename=None):
 
                 data.columns = ["X_um", "Y_um", "RamanShift", "Intensity"]
 
-                data["X_um"] #-= data["X_um"].min()
-                data["Y_um"] #-= data["Y_um"].max()
+                data["X_um"]  # -= data["X_um"].min()
+                data["Y_um"]  # -= data["Y_um"].max()
 
                 data["Sample"] = data.apply(
                     lambda row: f"{base_name}_X{row['X_um']:.2f}_Y{row['Y_um']:.2f}",
-                    axis=1
+                    axis=1,
                 )
 
                 data["CoordType"] = "XY"
@@ -70,7 +66,7 @@ def load_files(folder, indices=None, rename=None):
 
                 data["Sample"] = data.apply(
                     lambda row: f"{base_name}_R{row['R_um']:.2f}_Z{row['Z_um']:.2f}",
-                    axis=1
+                    axis=1,
                 )
 
                 data["CoordType"] = "RZ"
@@ -89,7 +85,7 @@ def load_files(folder, indices=None, rename=None):
 
                 data["Sample"] = data.apply(
                     lambda row: f"{base_name}_X{row['X_um']:.2f}_Y{row['Y_um']:.2f}",
-                    axis=1
+                    axis=1,
                 )
 
                 data["CoordType"] = "XY"
