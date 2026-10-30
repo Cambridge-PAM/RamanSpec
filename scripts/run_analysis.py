@@ -24,6 +24,12 @@ from src.visualisation.spectra import plot
 from src.visualisation.peaks import plot_all_peaks
 from src.visualisation.ratios import plot_ratios
 from src.visualisation.save import save_plot
+from src.visualisation.plot_data import (
+    spectra_data,
+    peak_fit_data,
+    peak_comparison_data,
+    map_data_frame,
+)
 from src.visualisation.fitting_peaks import plot_peak_fit
 from src.visualisation.peak_ratio_comparison import plot_peak_ratio_comparison
 
@@ -288,7 +294,14 @@ for range_name, r in config["peaks"]["ranges"].items():
             # ✅ UNIQUE NAME PER FIT
             plot_name = f"{range_name}__{sample}"
 
-            save_plot(fig, experiment_name, f"fit_{plot_name}")
+            save_plot(
+                fig,
+                experiment_name,
+                f"fit_{plot_name}",
+                data=peak_fit_data(
+                    df_proc, fit["params"], fit["peaks"], fit["bounds"], sample
+                ),
+            )
 
 # -----------------------
 # RATIOS
@@ -320,7 +333,12 @@ if analysis_type == "non-positional":
     )
     plt.title("Raw Spectra")
 
-    save_plot(fig_raw, experiment_name, "raw_spectra")
+    save_plot(
+        fig_raw,
+        experiment_name,
+        "raw_spectra",
+        data=spectra_data(df, focus_range=focus_range),
+    )
 
     # -----------------------
     # PROCESSED PLOT
@@ -341,7 +359,12 @@ if analysis_type == "non-positional":
     # plt.title("Processed Spectra")
     # plt.show()
 
-    save_plot(fig_proc, experiment_name, "processed_spectra")
+    save_plot(
+        fig_proc,
+        experiment_name,
+        "processed_spectra",
+        data=spectra_data(df_proc, offset_step, focus_range),
+    )
 
     # -----------------------
     # COMPARE KEY PEAKS
@@ -356,7 +379,14 @@ if analysis_type == "non-positional":
         style_map=style_map,
     )
 
-    save_plot(fig_compare, experiment_name, "peak_ratio_comparison")
+    save_plot(
+        fig_compare,
+        experiment_name,
+        "peak_ratio_comparison",
+        data=peak_comparison_data(
+            all_fit_outputs, config["ratios"], config["peaks"]["tolerance"]
+        ),
+    )
 
     # -----------------------
     # PEAK INTENSITY PLOT
@@ -368,7 +398,7 @@ if analysis_type == "non-positional":
     # plt.title("Peak Intensities")
     # plt.show()
 
-    save_plot(fig_peak, experiment_name, "peak_area")
+    save_plot(fig_peak, experiment_name, "peak_area", data=df_peaks)
 
     # -----------------------
     # RATIO PLOTS
@@ -378,7 +408,7 @@ if analysis_type == "non-positional":
     # plt.title("Peak Ratios")
     # plt.show()
 
-    save_plot(fig_ratio, experiment_name, "ratios")
+    save_plot(fig_ratio, experiment_name, "ratios", data=df_ratios)
 
 elif analysis_type == "positional":
 
@@ -456,6 +486,11 @@ elif analysis_type == "positional":
                     fig,
                     experiment_name,
                     f"{sample_name}_ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
+                    data=map_data_frame(
+                        map_data,
+                        "Distance" if positional2D else coord_type,
+                        "Ratio",
+                    ),
                 )
 
         # -----------------------
@@ -494,7 +529,16 @@ elif analysis_type == "positional":
                 )
 
                 if fig:
-                    save_plot(fig, experiment_name, f"{sample_name}_{mode}_map_{peak}")
+                    save_plot(
+                        fig,
+                        experiment_name,
+                        f"{sample_name}_{mode}_map_{peak}",
+                        data=map_data_frame(
+                            map_data,
+                            "Distance" if positional2D else coord_type,
+                            mode,
+                        ),
+                    )
 
         # -----------------------
         # RAW INTENSITY MAP
@@ -525,7 +569,14 @@ elif analysis_type == "positional":
         )
 
         if fig:
-            save_plot(fig, experiment_name, f"{sample_name}_intensity_map")
+            save_plot(
+                fig,
+                experiment_name,
+                f"{sample_name}_intensity_map",
+                data=map_data_frame(
+                    map_data, "Distance" if positional2D else coord_type, "AUC"
+                ),
+            )
 
 # -----------------------
 # SAVE DATA
