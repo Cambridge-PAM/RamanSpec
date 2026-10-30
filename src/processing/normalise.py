@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 def auc_normalise(df, subset=None):
@@ -27,7 +28,14 @@ def auc_normalise(df, subset=None):
         grp["Intensity"] = y / normalization_factor
         return grp
 
-    return df.groupby("Sample", group_keys=False).apply(apply)
+    # Explicit loop (not groupby.apply) so the Sample column is kept without a FutureWarning
+    parts = []
+    for name, grp in df.groupby("Sample"):
+        grp = grp.copy()
+        grp.name = name
+        parts.append(apply(grp))
+
+    return pd.concat(parts) if parts else df
 
 
 def vector_normalise(df, subset=None):

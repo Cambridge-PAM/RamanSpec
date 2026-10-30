@@ -1,5 +1,6 @@
 import pybaselines as pbl
 import numpy as np
+import pandas as pd
 
 
 def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
@@ -27,6 +28,11 @@ def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
 
         return grp
 
-    df_out = df.groupby("Sample", group_keys=False).apply(apply, include_groups=True)
+    # Explicit loop (not groupby.apply) so the Sample column is kept without a FutureWarning
+    parts = []
+    for name, grp in df.groupby("Sample"):
+        grp = grp.copy()
+        grp.name = name
+        parts.append(apply(grp))
 
-    return df_out
+    return pd.concat(parts) if parts else df
