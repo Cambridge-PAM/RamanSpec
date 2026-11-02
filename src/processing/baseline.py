@@ -1,5 +1,7 @@
 import pybaselines as pbl
 import numpy as np
+import pandas as pd
+
 
 def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
     baselineFitter = pbl.Baseline()
@@ -10,16 +12,15 @@ def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
         y = grp["Intensity"].values
 
         # Use the provided lam and p values
-        #baseline, _ = baselineFitter.psalsa(y, lam=lam, p=p)
+        # baseline, _ = baselineFitter.psalsa(y, lam=lam, p=p)
         baseline, _ = baselineFitter.airpls(y, lam=lam)
         baseline, _ = baselineFitter.arpls(y, lam=lam)
-
 
         grp = grp.copy()
 
         grp["RawIntensity"] = y
         grp["Baseline"] = baseline  # ✅ store baseline
-        
+
         y_corr = y - baseline
         y_corr[y_corr < 0] = 0
 
@@ -27,7 +28,11 @@ def psalsa_baseline(df, lam=1e6, p=0.01, return_baseline=False):
 
         return grp
 
-    df_out = df.groupby("Sample", group_keys=False).apply(apply, include_groups=True)
-    
+    # Explicit loop (not groupby.apply) so the Sample column is kept without a FutureWarning
+    parts = []
+    for name, grp in df.groupby("Sample"):
+        grp = grp.copy()
+        grp.name = name
+        parts.append(apply(grp))
 
-    return df_out
+    return pd.concat(parts) if parts else df

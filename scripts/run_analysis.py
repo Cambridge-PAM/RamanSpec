@@ -1,4 +1,8 @@
 from pathlib import Path
+from datetime import datetime
+import os
+import subprocess
+import re
 import sys
 
 # Add parent directory to path so src module can be imported
@@ -14,11 +18,18 @@ from src.processing.pipeline import Pipeline
 from src.processing.baseline import psalsa_baseline
 from src.processing.normalise import auc_normalise
 from src.processing.smoothing import smooth
+from src.processing.crop import crop_map_edges
 
 from src.visualisation.spectra import plot
 from src.visualisation.peaks import plot_all_peaks
 from src.visualisation.ratios import plot_ratios
 from src.visualisation.save import save_plot
+from src.visualisation.plot_data import (
+    spectra_data,
+    peak_fit_data,
+    peak_comparison_data,
+    map_data_frame,
+)
 from src.visualisation.fitting_peaks import plot_peak_fit
 from src.visualisation.peak_ratio_comparison import plot_peak_ratio_comparison
 
@@ -30,9 +41,8 @@ from src.visualisation.mapping import (
     build_ratio_map_from_df,
     build_peak_param_map_from_df,
     build_intensity_map,
-    plot_map
+    plot_map,
 )
-
 
 # -----------------------
 # LOAD CONFIG
@@ -45,9 +55,40 @@ with open("config/config.yaml", encoding="utf-8") as f:
 # -----------------------
 input_config = config["input"]
 
-data_folder = input_config["folder"]
+base_path = input_config.get("base_path")
+# An absolute "folder" overrides base_path; with no base_path, "folder" is relative to the repo
+data_folder = (
+    Path(base_path) / input_config["folder"] if base_path else input_config["folder"]
+)
+if not Path(data_folder).is_dir():
+    raise FileNotFoundError(f"Data folder not found: {data_folder}")
 indices = input_config.get("indices")
 rename = input_config.get("rename")
+
+# Several indices: analyse each file in turn as a separate run (child process per file)
+_job = os.environ.get("RAMANSPEC_JOB")
+if _job is not None:
+    _idx, _, _name = _job.partition("|")
+    indices = [int(_idx)]
+    rename = [_name] if _name else None
+else:
+    _all_files = sorted(f for f in os.listdir(data_folder) if f.endswith(".txt"))
+    _idx_list = list(range(len(_all_files))) if indices is None else list(indices)
+    if rename and len(rename) != len(_idx_list):
+        raise ValueError(
+            "input.rename must contain one name for each input.indices entry."
+        )
+    if len(_idx_list) > 1:
+        for _k, _i in enumerate(_idx_list):
+            _label = rename[_k] if rename else ""
+            print(f"\n##### File {_k + 1}/{len(_idx_list)}: index {_i} {_label} #####")
+            subprocess.run(
+                [sys.executable, str(Path(__file__).resolve())],
+                env={**os.environ, "RAMANSPEC_JOB": f"{_i}|{_label}"},
+                cwd=os.getcwd(),
+                check=True,
+            )
+        sys.exit(0)
 
 experiment_name = Path(data_folder).name
 analysis_type = config["analysistype"]
@@ -90,6 +131,36 @@ def subset_map_data(map_data, coord_type, enabled, first_n_points=None):
     n_points = max(1, min(n_points, len(ordered)))
     return ordered[:n_points]
 
+
+def select_nonpositional_points(spectrum_df, point_indices=None, point_names=None):
+    if point_indices is None:
+        return spectrum_df
+
+    point_labels = list(spectrum_df["Sample"].drop_duplicates())
+    selected_indices = list(point_indices)
+
+    if any(index < 0 or index >= len(point_labels) for index in selected_indices):
+        raise IndexError(
+            f"nonpositional_indices must refer to points from 0 to {len(point_labels) - 1}."
+        )
+
+    selected_labels = [point_labels[index] for index in selected_indices]
+    selected_df = spectrum_df[spectrum_df["Sample"].isin(selected_labels)].copy()
+
+    if point_names is not None:
+        point_names = list(point_names)
+        if len(point_names) != len(selected_labels):
+            raise ValueError(
+                "nonpositional_rename must contain one name for each "
+                "nonpositional_indices entry."
+            )
+
+        rename_map = dict(zip(selected_labels, point_names))
+        selected_df["Sample"] = selected_df["Sample"].map(rename_map)
+
+    return selected_df
+
+
 # -----------------------
 # LOAD DATA
 # -----------------------
@@ -98,10 +169,49 @@ print(f"\n=== Loading data: {experiment_name} ===")
 df = load_files(data_folder, indices, rename)
 
 isPositional = any(col in df.columns for col in ["X_um", "Y_um", "R_um", "Z_um"])
+
+crop_cfg = config.get("processing", {}).get("crop_edge_pixels", {})
+if isPositional and crop_cfg.get("enabled", False):
+    crop_pixels = crop_cfg.get("pixels", 1)
+    print(f"✂️  Cropping {crop_pixels} outer pixel(s) from positional map edges...")
+    df = crop_map_edges(df, crop_pixels)
+
 if not isPositional and analysis_type == "positional":
-    print("⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis.")   
+    print(
+        "⚠️  Warning: Data does not contain positional information but analysis type is set to 'positional'. Proceeding with non-positional analysis."
+    )
     analysis_type = "non-positional"
-    
+
+if analysis_type == "non-positional" and isPositional:
+    df = select_nonpositional_points(
+        df, config.get("nonpositional_indices"), config.get("nonpositional_rename")
+    )
+    print(f"Selected {df['Sample'].nunique()} non-positional points.")
+
+# Label from the config renames (as applied), used on figures and in filenames
+_names = list(rename or [])
+rename_label = "_".join(re.sub(r'[<>:"/\\|?*\s]+', "-", str(n)) for n in _names)
+file_prefix = f"{experiment_name}_{rename_label}" if rename_label else experiment_name
+
+_save_plot = save_plot
+
+
+def save_plot(fig, experiment_name, plot_type, **kwargs):
+    if rename_label:
+        fig.text(
+            0.01,
+            0.995,
+            ", ".join(map(str, _names)),
+            ha="left",
+            va="bottom",
+            fontsize=8,
+            color="gray",
+        )
+    return _save_plot(
+        fig, experiment_name, plot_type, file_prefix=file_prefix, **kwargs
+    )
+
+
 # -----------------------
 # HANDLE LINE SCAN (positional2D)
 # -----------------------
@@ -109,11 +219,19 @@ if positional2D and isPositional:
     print("⚙️  Treating positional data as a line scan (2D)...")
     # Calculate cumulative distance for line scan
     if "X_um" in df.columns and "Y_um" in df.columns:
-        df["Distance"] = np.sqrt((df["X_um"] - df["X_um"].iloc[0])**2 + (df["Y_um"] - df["Y_um"].iloc[0])**2)
+        df["Distance"] = np.sqrt(
+            (df["X_um"] - df["X_um"].iloc[0]) ** 2
+            + (df["Y_um"] - df["Y_um"].iloc[0]) ** 2
+        )
     elif "R_um" in df.columns and "Z_um" in df.columns:
-        df["Distance"] = np.sqrt((df["R_um"] - df["R_um"].iloc[0])**2 + (df["Z_um"] - df["Z_um"].iloc[0])**2)
+        df["Distance"] = np.sqrt(
+            (df["R_um"] - df["R_um"].iloc[0]) ** 2
+            + (df["Z_um"] - df["Z_um"].iloc[0]) ** 2
+        )
     else:
-        raise ValueError("Positional2D requires X/Y or R/Z coordinates to calculate distance.")
+        raise ValueError(
+            "Positional2D requires X/Y or R/Z coordinates to calculate distance."
+        )
     # Replace positional columns with Distance for plotting
     df = df.drop(columns=["X_um", "Y_um", "R_um", "Z_um"], errors="ignore")
 
@@ -133,7 +251,7 @@ if processing.get("baseline", False):
 if processing.get("normalize", False):
     print(" - Normalisation")
     pipe.add(auc_normalise)
-    
+
 if processing.get("smoothing", False):
     print(" - Smoothing")
     pipe.add(smooth)
@@ -153,37 +271,37 @@ for range_name, r in config["peaks"]["ranges"].items():
     print(f"--- Fitting {range_name} ({r['bounds']}) ---")
 
     results, fit_outputs = fit_peak_range(
-        df_proc,
-        r["bounds"],
-        r["peaks"],
-        config["peaks"]["tolerance"]
+        df_proc, r["bounds"], r["peaks"], config["peaks"]["tolerance"]
     )
 
     all_results.extend(results)
-    all_fit_outputs.extend(fit_outputs) 
+    all_fit_outputs.extend(fit_outputs)
 
     # ✅ LOOP OVER EVERY SAMPLE FIT
     if analysis_type == "non-positional":
         for fit in fit_outputs:
 
             sample = fit["Sample"]
-            
+
             fig = plot_peak_fit(
-                df_proc,
-                fit["params"],
-                fit["peaks"],
-                fit["bounds"],
-                sample
+                df_proc, fit["params"], fit["peaks"], fit["bounds"], sample
             )
 
             if fig is None:
-                print('none')
+                print("none")
                 continue
 
             # ✅ UNIQUE NAME PER FIT
             plot_name = f"{range_name}__{sample}"
 
-            save_plot(fig, experiment_name, f"fit_{plot_name}")
+            save_plot(
+                fig,
+                experiment_name,
+                f"fit_{plot_name}",
+                data=peak_fit_data(
+                    df_proc, fit["params"], fit["peaks"], fit["bounds"], sample
+                ),
+            )
 
 # -----------------------
 # RATIOS
@@ -195,11 +313,13 @@ df_ratios = compute_ratios(
     df_peaks,
     config["ratios"],
     df_spectrum=df,  # Pass the full spectrum DataFrame
-    intensity_threshold=config["peaks"].get("intensity_threshold", 100)  # Default threshold is 100
+    intensity_threshold=config["peaks"].get(
+        "intensity_threshold", 100
+    ),  # Default threshold is 100
 )
 
-#print("\n=== RATIOS ===")
-#print(df_ratios)
+# print("\n=== RATIOS ===")
+# print(df_ratios)
 
 
 if analysis_type == "non-positional":
@@ -207,10 +327,18 @@ if analysis_type == "non-positional":
     # RAW PLOT
     # -----------------------
     print("Plotting raw data...")
-    fig_raw, style_map = plot(df,focus_range=focus_range)
+    fig_raw, style_map = plot(
+        df,
+        focus_range=focus_range,
+    )
     plt.title("Raw Spectra")
 
-    save_plot(fig_raw, experiment_name, "raw_spectra")
+    save_plot(
+        fig_raw,
+        experiment_name,
+        "raw_spectra",
+        data=spectra_data(df, focus_range=focus_range),
+    )
 
     # -----------------------
     # PROCESSED PLOT
@@ -221,12 +349,23 @@ if analysis_type == "non-positional":
     if config["plotting"]["offset"].get("enabled", False):
         offset_step = config["plotting"]["offset"].get("step", None)
 
-    fig_proc, style_map = plot(df_proc, style_map=style_map, offset_step=offset_step)
-    #plt.title("Processed Spectra")
-    #plt.show()
+    fig_proc, style_map = plot(
+        df_proc,
+        style_map=style_map,
+        offset_step=offset_step,
+        focus_range=focus_range,
+        detect_peaks=True,
+    )
+    # plt.title("Processed Spectra")
+    # plt.show()
 
-    save_plot(fig_proc, experiment_name, "processed_spectra")
-    
+    save_plot(
+        fig_proc,
+        experiment_name,
+        "processed_spectra",
+        data=spectra_data(df_proc, offset_step, focus_range),
+    )
+
     # -----------------------
     # COMPARE KEY PEAKS
     # -----------------------
@@ -237,10 +376,17 @@ if analysis_type == "non-positional":
         all_fit_outputs,
         config["ratios"],
         config["peaks"]["tolerance"],
-        style_map=style_map
+        style_map=style_map,
     )
 
-    save_plot(fig_compare, experiment_name, "peak_ratio_comparison")
+    save_plot(
+        fig_compare,
+        experiment_name,
+        "peak_ratio_comparison",
+        data=peak_comparison_data(
+            all_fit_outputs, config["ratios"], config["peaks"]["tolerance"]
+        ),
+    )
 
     # -----------------------
     # PEAK INTENSITY PLOT
@@ -249,23 +395,23 @@ if analysis_type == "non-positional":
     print(df_peaks)
 
     fig_peak = plot_all_peaks(df_peaks)
-    #plt.title("Peak Intensities")
-    #plt.show()
+    # plt.title("Peak Intensities")
+    # plt.show()
 
-    save_plot(fig_peak, experiment_name, "peak_area")
+    save_plot(fig_peak, experiment_name, "peak_area", data=df_peaks)
 
     # -----------------------
     # RATIO PLOTS
     # -----------------------
     print("Plotting ratios")
     fig_ratio, style_map = plot_ratios(df_ratios, style_map=style_map)
-    #plt.title("Peak Ratios")
-    #plt.show()
+    # plt.title("Peak Ratios")
+    # plt.show()
 
-    save_plot(fig_ratio, experiment_name, "ratios")
+    save_plot(fig_ratio, experiment_name, "ratios", data=df_ratios)
 
 elif analysis_type == "positional":
-    
+
     print("\n=== Generating positional maps ===")
 
     tol = config["peaks"]["tolerance"]
@@ -302,7 +448,7 @@ elif analysis_type == "positional":
         # RATIO MAPS
         # -----------------------
         for ratio_pair in config["ratios"]:
-        
+
             df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
 
             map_data, coord_type = build_ratio_map_from_df(
@@ -310,12 +456,16 @@ elif analysis_type == "positional":
                 ratio_pair,
                 tol,
                 df_spectrum=df,  # Pass the full spectrum DataFrame
-                intensity_threshold=config["peaks"].get("intensity_threshold", 100)  # Default threshold is 100
+                intensity_threshold=config["peaks"].get(
+                    "intensity_threshold", 100
+                ),  # Default threshold is 100
             )
-            map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
-            
+            map_data = subset_map_data(
+                map_data, coord_type, use_map_subset, subset_first_n_points
+            )
+
             print(f" [-] {sample_name}, {ratio_pair} → map points:", len(map_data))
-            
+
             ratio_vmin = None
             ratio_vmax = None
             if use_manual_map_limits and manual_ratio_limits is not None:
@@ -328,17 +478,20 @@ elif analysis_type == "positional":
                 plotmode=map_mode,
                 coord_type="Distance" if positional2D else coord_type,
                 vmin=ratio_vmin,
-                vmax=ratio_vmax
+                vmax=ratio_vmax,
             )
-
 
             if fig:
                 save_plot(
                     fig,
                     experiment_name,
-                    f"{sample_name}_ratio_map_{ratio_pair[0]}_{ratio_pair[1]}"
+                    f"{sample_name}_ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
+                    data=map_data_frame(
+                        map_data,
+                        "Distance" if positional2D else coord_type,
+                        "Ratio",
+                    ),
                 )
-
 
         # -----------------------
         # PEAK PARAMETER MAPS
@@ -349,33 +502,43 @@ elif analysis_type == "positional":
 
         for peak in target_peaks:
 
-            for mode in ["Amplitude", "Center", "Sigma", "Gamma", "PeakArea", "BaselineIntensity"]:
+            for mode in [
+                "Amplitude",
+                "Center",
+                "Sigma",
+                "Gamma",
+                "PeakArea",
+                "BaselineIntensity",
+            ]:
 
                 df_sample = df_peaks[df_peaks["Sample"].isin(sample_labels)]
 
                 map_data, coord_type = build_peak_param_map_from_df(
-                    df_sample,
-                    peak,
-                    tol,
-                    mode
+                    df_sample, peak, tol, mode
                 )
-                map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
+                map_data = subset_map_data(
+                    map_data, coord_type, use_map_subset, subset_first_n_points
+                )
 
                 fig = plot_map(
                     map_data,
                     title=f"{sample_name}: {peak} cm⁻¹ ({mode})",
                     label=mode,
                     plotmode=map_mode,
-                    coord_type="Distance" if positional2D else coord_type
+                    coord_type="Distance" if positional2D else coord_type,
                 )
 
                 if fig:
                     save_plot(
                         fig,
                         experiment_name,
-                        f"{sample_name}_{mode}_map_{peak}"
+                        f"{sample_name}_{mode}_map_{peak}",
+                        data=map_data_frame(
+                            map_data,
+                            "Distance" if positional2D else coord_type,
+                            mode,
+                        ),
                     )
-
 
         # -----------------------
         # RAW INTENSITY MAP
@@ -384,9 +547,11 @@ elif analysis_type == "positional":
 
         # ✅ filter df for this sample only
         df_subset = df[df["Sample"].isin(sample_labels)]
-        
+
         map_data, coord_type = build_intensity_map(df_subset)
-        map_data = subset_map_data(map_data, coord_type, use_map_subset, subset_first_n_points)
+        map_data = subset_map_data(
+            map_data, coord_type, use_map_subset, subset_first_n_points
+        )
 
         intensity_vmin = None
         intensity_vmax = None
@@ -400,14 +565,17 @@ elif analysis_type == "positional":
             plotmode=map_mode,
             coord_type="Distance" if positional2D else coord_type,
             vmin=intensity_vmin,
-            vmax=intensity_vmax
+            vmax=intensity_vmax,
         )
 
         if fig:
             save_plot(
                 fig,
                 experiment_name,
-                f"{sample_name}_intensity_map"
+                f"{sample_name}_intensity_map",
+                data=map_data_frame(
+                    map_data, "Distance" if positional2D else coord_type, "AUC"
+                ),
             )
 
 # -----------------------
@@ -415,6 +583,40 @@ elif analysis_type == "positional":
 # -----------------------
 output_folder = Path("outputs") / experiment_name
 output_folder.mkdir(parents=True, exist_ok=True)
+
+
+def _git(*args):
+    try:
+        return subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=Path(__file__).resolve().parent.parent,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+git_commit = _git("rev-parse", "HEAD") or "unknown"
+git_branch = _git("rev-parse", "--abbrev-ref", "HEAD") or "unknown"
+git_dirty = _git("status", "--porcelain")
+if git_dirty is None:
+    dirty_note = "unknown"
+else:
+    dirty_note = "yes (uncommitted changes)" if git_dirty else "no"
+
+with open(output_folder / f"{file_prefix}_metadata.txt", "w", encoding="utf-8") as f:
+    f.write("RamanSpec analysis metadata\n")
+    f.write("===========================\n")
+    f.write(f"Run time: {datetime.now().isoformat(timespec='seconds')}\n")
+    f.write(f"Experiment: {experiment_name}\n")
+    f.write(f"Git commit: {git_commit}\n")
+    f.write(f"Git branch: {git_branch}\n")
+    f.write(f"Uncommitted changes: {dirty_note}\n")
+    f.write("\nconfig.yaml parameters\n")
+    f.write("----------------------\n")
+    yaml.safe_dump(config, f, sort_keys=False, default_flow_style=False)
 
 # df_proc.to_csv(output_folder / f"{experiment_name}_processed.csv", index=False)
 # df_peaks.to_csv(output_folder / f"{experiment_name}_peaks.csv", index=False)

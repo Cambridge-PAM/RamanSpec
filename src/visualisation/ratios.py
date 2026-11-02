@@ -6,8 +6,8 @@ from src.visualisation.style import parse_sample_name
 
 def plot_ratios(df, style_map=None):
 
-    fig, ax = plt.subplots(figsize=(10,5))
-    
+    fig, ax = plt.subplots(figsize=(10, 5))
+
     if style_map is None:
         style_map = build_style_map(df["Sample"].unique())
 
@@ -55,12 +55,7 @@ def plot_ratios(df, style_map=None):
         xpos = x + i * bar_width
 
         ax.bar(
-            xpos,
-            values,
-            width=bar_width,
-            label=prefix,
-            color=colors,
-            edgecolor='black'
+            xpos, values, width=bar_width, label=prefix, color=colors, edgecolor="black"
         )
 
     # -----------------------
