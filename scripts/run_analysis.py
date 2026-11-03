@@ -621,7 +621,9 @@ elif analysis_type == "positional_entexit":
         def peaks_of(labels):
             return df_peaks[df_peaks["Sample"].isin(labels)]
 
-        def emit(map_ent, map_exit, title, label, plot_type, vmin=None, vmax=None):
+        def emit(
+            map_ent, map_exit, title, label, plot_type, vmin=None, vmax=None, pdf=False
+        ):
             fig = plot_split_map(
                 map_ent,
                 map_exit,
@@ -638,6 +640,7 @@ elif analysis_type == "positional_entexit":
                     fig,
                     experiment_name,
                     f"{pair_name}_{plot_type}",
+                    pdf=pdf,
                     data=pd.concat(
                         [
                             map_data_frame(map_ent, coord, label).assign(
@@ -673,6 +676,7 @@ elif analysis_type == "positional_entexit":
                     fig_diff,
                     experiment_name,
                     f"{pair_name}_{plot_type}_difference",
+                    pdf=pdf,
                     data=map_data_frame(diff, coord, f"{label}_diff"),
                 )
 
@@ -696,6 +700,7 @@ elif analysis_type == "positional_entexit":
                 title=f"{ent_name} / {exit_name}: {ratio_pair[0]} / {ratio_pair[1]} Peak Ratio",
                 label="Ratio",
                 plot_type=f"ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
+                pdf=True,
                 vmin=ratio_vmin,
                 vmax=ratio_vmax,
             )

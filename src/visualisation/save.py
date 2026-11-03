@@ -1,6 +1,8 @@
 from pathlib import Path
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+
 
 def save_plot(
     fig,
@@ -9,6 +11,7 @@ def save_plot(
     base_folder="outputs",
     file_prefix=None,
     data=None,
+    pdf=False,
 ):
 
     # Create experiment-specific subfolder
@@ -24,6 +27,11 @@ def save_plot(
     filepath = output_folder / filename
 
     fig.savefig(filepath, dpi=300, bbox_inches="tight")
+
+    if pdf:
+        # fonttype 42 embeds text as real fonts so it stays editable in Illustrator/Inkscape
+        with plt.rc_context({"pdf.fonttype": 42}):
+            fig.savefig(filepath.with_suffix(".pdf"), bbox_inches="tight")
 
     if data is not None:
         data.to_csv(filepath.with_suffix(".csv"), index=False)
