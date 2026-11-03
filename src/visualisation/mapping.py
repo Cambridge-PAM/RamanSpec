@@ -373,6 +373,125 @@ def plot_map(
 
 
 # -------------------------------------------------
+# SPLIT (ENTRANCE / EXIT) MAP
+# -------------------------------------------------
+def _map_to_grid(map_data):
+    """Convert [x, y, value] records to a (ny, nx) grid, row 0 = lowest y."""
+    x, y, z = map_data[:, 0], map_data[:, 1], map_data[:, -1]
+    x_unique = np.sort(np.unique(x))
+    y_unique = np.sort(np.unique(y))
+    grid = np.full((len(y_unique), len(x_unique)), np.nan)
+    ix = np.searchsorted(x_unique, x)
+    iy = np.searchsorted(y_unique, y)
+    grid[iy, ix] = z
+    return grid
+
+
+def build_difference_map(map_minuend, map_subtrahend):
+    """Return [x, y, minuend - subtrahend] for pixels present in both 2D maps."""
+    for m in (map_minuend, map_subtrahend):
+        if m is None or len(m) == 0 or m.ndim != 2 or m.shape[1] < 3:
+            return np.array([])
+    sub = {(x, y): v for x, y, v in map_subtrahend[:, :3]}
+    records = [
+        [x, y, v - sub[(x, y)]] for x, y, v in map_minuend[:, :3] if (x, y) in sub
+    ]
+    return np.array(records)
+
+
+def plot_split_map(
+    map_lower,
+    map_upper,
+    title,
+    label="Value",
+    lower_name="Entrance",
+    upper_name="Exit",
+    cmap="viridis",
+    vmin=None,
+    vmax=None,
+):
+    """
+    Square map split along the diagonal: the bottom-left triangle shows
+    map_lower and the top-right triangle shows map_upper. Both use the same
+    colour map and colour scale. Maps must be 2D (XY or RZ) with equal grid size.
+    """
+    for m in (map_lower, map_upper):
+        if m is None or len(m) == 0 or m.ndim != 2 or m.shape[1] < 3:
+            print(title, " : ⚠️ No 2D positional data available for split map")
+            return None
+
+    grid_lower = _map_to_grid(map_lower)
+    grid_upper = _map_to_grid(map_upper)
+    if grid_lower.shape != grid_upper.shape:
+        print(
+            title,
+            f" : ⚠️ Grid sizes differ ({grid_lower.shape} vs {grid_upper.shape}); skipping",
+        )
+        return None
+
+    ny, nx = grid_lower.shape
+    rows = np.arange(ny)[:, None] / max(ny - 1, 1)
+    cols = np.arange(nx)[None, :] / max(nx - 1, 1)
+    # Row 0 is drawn at the top, so rows below the diagonal have rows >= cols
+    lower_mask = rows >= cols
+    combined = np.where(lower_mask, grid_lower, grid_upper)
+
+    values = combined[np.isfinite(combined)]
+    if len(values) == 0:
+        print(title, " : ⚠️ No valid values to plot")
+        return None
+    if vmin is None:
+        vmin = values.min()
+    if vmax is None:
+        vmax = values.max()
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111)
+    im = ax.imshow(
+        combined,
+        origin="upper",
+        cmap=cmap,
+        aspect="equal",
+        vmin=vmin,
+        vmax=vmax,
+        extent=(-0.5, nx - 0.5, ny - 0.5, -0.5),
+    )
+    plt.colorbar(im, ax=ax, label=label)
+    # Dividing line runs top-left to bottom-right, matching the triangle mask
+    ax.plot([-0.5, nx - 0.5], [-0.5, ny - 0.5], color="k", linewidth=0.8)
+    label_style = dict(
+        fontsize=11,
+        fontweight="bold",
+        color="k",
+        bbox=dict(facecolor="w", edgecolor="k", alpha=0.85, boxstyle="round,pad=0.3"),
+    )
+    # Labels sit in the right-angle corner of each triangle, away from the divider
+    ax.text(
+        0.04,
+        0.05,
+        lower_name,
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        **label_style,
+    )
+    ax.text(
+        0.96,
+        0.95,
+        upper_name,
+        transform=ax.transAxes,
+        ha="right",
+        va="top",
+        **label_style,
+    )
+    ax.set_xlabel("Pixel (X / R index)")
+    ax.set_ylabel("Pixel (Y / Z index)")
+    ax.set_title(title)
+    plt.tight_layout()
+    return fig
+
+
+# -------------------------------------------------
 # PEAK RATIO MAP
 # -------------------------------------------------
 def build_ratio_map(fit_outputs, ratio_pair, tolerance, intensity_threshold=100):

@@ -42,12 +42,14 @@ from src.visualisation.mapping import (
     build_peak_param_map_from_df,
     build_intensity_map,
     plot_map,
+    plot_split_map,
+    build_difference_map,
 )
 
 # -----------------------
 # LOAD CONFIG
 # -----------------------
-with open("config/config.yaml", encoding="utf-8") as f:
+with open("config/config-publication.yaml", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
 # -----------------------
@@ -78,7 +80,8 @@ else:
         raise ValueError(
             "input.rename must contain one name for each input.indices entry."
         )
-    if len(_idx_list) > 1:
+    # positional_entexit pairs files, so all of them must be loaded in one run
+    if len(_idx_list) > 1 and config["analysistype"] != "positional_entexit":
         for _k, _i in enumerate(_idx_list):
             _label = rename[_k] if rename else ""
             print(f"\n##### File {_k + 1}/{len(_idx_list)}: index {_i} {_label} #####")
@@ -576,6 +579,140 @@ elif analysis_type == "positional":
                 data=map_data_frame(
                     map_data, "Distance" if positional2D else coord_type, "AUC"
                 ),
+            )
+
+elif analysis_type == "positional_entexit":
+
+    print("\n=== Generating entrance/exit split maps ===")
+
+    if not isPositional or positional2D:
+        raise ValueError("positional_entexit requires 2D positional (XY or RZ) data.")
+
+    pairs = config.get("entexit_pairs")
+    if not pairs:
+        raise ValueError(
+            "positional_entexit requires 'entexit_pairs' in the config, "
+            "e.g. [[TEP_Ent, TEP_Exit], [MEP_Ent, MEP_Exit]]."
+        )
+
+    tol = config["peaks"]["tolerance"]
+    threshold = config["peaks"].get("intensity_threshold", 100)
+    split_cmap = config.get("plotting", {}).get("entexit_cmap", "viridis")
+    diff_cmap = config.get("plotting", {}).get("entexit_diff_cmap", "RdBu_r")
+    target_peaks = sorted(set([p for pair in config["ratios"] for p in pair]))
+
+    def base_name(sample_name):
+        return re.split(r"_X|_R", sample_name)[0]
+
+    def labels_for(name):
+        return [s for s in df["Sample"].unique() if base_name(s) == name]
+
+    for ent_name, exit_name in pairs:
+        ent_labels = labels_for(ent_name)
+        exit_labels = labels_for(exit_name)
+        if not ent_labels or not exit_labels:
+            raise ValueError(
+                f"Pair [{ent_name}, {exit_name}] not found in loaded samples "
+                f"{sorted({base_name(s) for s in df['Sample'].unique()})}."
+            )
+        pair_name = f"{ent_name}_{exit_name}"
+        print(f"\n ==> Processing pair: {ent_name} / {exit_name}")
+
+        def peaks_of(labels):
+            return df_peaks[df_peaks["Sample"].isin(labels)]
+
+        def emit(map_ent, map_exit, title, label, plot_type, vmin=None, vmax=None):
+            fig = plot_split_map(
+                map_ent,
+                map_exit,
+                title=title,
+                label=label,
+                lower_name=ent_name,
+                upper_name=exit_name,
+                cmap=split_cmap,
+                vmin=vmin,
+                vmax=vmax,
+            )
+            if fig:
+                save_plot(
+                    fig,
+                    experiment_name,
+                    f"{pair_name}_{plot_type}",
+                    data=pd.concat(
+                        [
+                            map_data_frame(map_ent, coord, label).assign(
+                                Sample=ent_name
+                            ),
+                            map_data_frame(map_exit, coord, label).assign(
+                                Sample=exit_name
+                            ),
+                        ]
+                    ),
+                )
+
+            # Separate Exit - Ent difference map on a symmetric diverging scale
+            diff = build_difference_map(map_exit, map_ent)
+            if len(diff) == 0:
+                return
+            finite = diff[np.isfinite(diff[:, -1]), -1]
+            if len(finite) == 0:
+                return
+            lim = float(np.max(np.abs(finite)))
+            fig_diff = plot_map(
+                diff,
+                title=f"{title} — Difference ({exit_name} − {ent_name})",
+                label=f"{label} ({exit_name} − {ent_name})",
+                cmap=diff_cmap,
+                plotmode="pixel",
+                coord_type=coord,
+                vmin=-lim,
+                vmax=lim,
+            )
+            if fig_diff:
+                save_plot(
+                    fig_diff,
+                    experiment_name,
+                    f"{pair_name}_{plot_type}_difference",
+                    data=map_data_frame(diff, coord, f"{label}_diff"),
+                )
+
+        # Ratio maps
+        ratio_vmin = ratio_vmax = None
+        if use_manual_map_limits and manual_ratio_limits is not None:
+            ratio_vmin, ratio_vmax = manual_ratio_limits
+        for ratio_pair in config["ratios"]:
+            maps = []
+            for labels in (ent_labels, exit_labels):
+                m, coord = build_ratio_map_from_df(
+                    peaks_of(labels),
+                    ratio_pair,
+                    tol,
+                    df_spectrum=df,
+                    intensity_threshold=threshold,
+                )
+                maps.append(m)
+            emit(
+                *maps,
+                title=f"{ent_name} / {exit_name}: {ratio_pair[0]} / {ratio_pair[1]} Peak Ratio",
+                label="Ratio",
+                plot_type=f"ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
+                vmin=ratio_vmin,
+                vmax=ratio_vmax,
+            )
+
+        # Peak area maps
+        for peak in target_peaks:
+            maps = []
+            for labels in (ent_labels, exit_labels):
+                m, coord = build_peak_param_map_from_df(
+                    peaks_of(labels), peak, tol, "PeakArea"
+                )
+                maps.append(m)
+            emit(
+                *maps,
+                title=f"{ent_name} / {exit_name}: {peak} cm⁻¹ (PeakArea)",
+                label="PeakArea",
+                plot_type=f"PeakArea_map_{peak}",
             )
 
 # -----------------------
