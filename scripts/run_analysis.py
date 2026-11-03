@@ -198,9 +198,14 @@ file_prefix = f"{experiment_name}_{rename_label}" if rename_label else experimen
 
 _save_plot = save_plot
 
+# positional_entexit filenames carry the pair name instead of every renamed file
+_pair_mode = analysis_type == "positional_entexit"
+if _pair_mode:
+    file_prefix = experiment_name
+
 
 def save_plot(fig, experiment_name, plot_type, **kwargs):
-    if rename_label:
+    if rename_label and not _pair_mode:
         fig.text(
             0.01,
             0.995,
@@ -615,7 +620,7 @@ elif analysis_type == "positional_entexit":
                 f"Pair [{ent_name}, {exit_name}] not found in loaded samples "
                 f"{sorted({base_name(s) for s in df['Sample'].unique()})}."
             )
-        pair_name = f"{ent_name}_{exit_name}"
+        pair_name = f"{ent_name}_vs_{exit_name}"
         print(f"\n ==> Processing pair: {ent_name} / {exit_name}")
 
         def peaks_of(labels):
@@ -639,7 +644,7 @@ elif analysis_type == "positional_entexit":
                 save_plot(
                     fig,
                     experiment_name,
-                    f"{pair_name}_{plot_type}",
+                    f"{pair_name}__{plot_type}",
                     pdf=pdf,
                     data=pd.concat(
                         [
@@ -675,7 +680,7 @@ elif analysis_type == "positional_entexit":
                 save_plot(
                     fig_diff,
                     experiment_name,
-                    f"{pair_name}_{plot_type}_difference",
+                    f"{pair_name}__{plot_type}_difference",
                     pdf=pdf,
                     data=map_data_frame(diff, coord, f"{label}_diff"),
                 )
@@ -699,7 +704,7 @@ elif analysis_type == "positional_entexit":
                 *maps,
                 title=f"{ent_name} / {exit_name}: {ratio_pair[0]} / {ratio_pair[1]} Peak Ratio",
                 label="Ratio",
-                plot_type=f"ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
+                plot_type=f"ratio_{ratio_pair[0]}_over_{ratio_pair[1]}",
                 pdf=True,
                 vmin=ratio_vmin,
                 vmax=ratio_vmax,
@@ -717,7 +722,7 @@ elif analysis_type == "positional_entexit":
                 *maps,
                 title=f"{ent_name} / {exit_name}: {peak} cm⁻¹ (PeakArea)",
                 label="PeakArea",
-                plot_type=f"PeakArea_map_{peak}",
+                plot_type=f"PeakArea_{peak}",
             )
 
 # -----------------------
