@@ -460,7 +460,7 @@ def plot_split_map(
     # Dividing line runs top-left to bottom-right, matching the triangle mask
     ax.plot([-0.5, nx - 0.5], [-0.5, ny - 0.5], color="k", linewidth=0.8)
     label_style = dict(
-        fontsize=11,
+        fontsize=plt.rcParams["font.size"] * 1.1,
         fontweight="bold",
         color="k",
         bbox=dict(facecolor="w", edgecolor="k", alpha=0.85, boxstyle="round,pad=0.3"),

@@ -590,6 +590,11 @@ elif analysis_type == "positional_entexit":
 
     print("\n=== Generating entrance/exit split maps ===")
 
+    # Double the default 10 pt text, in Arial (embedded as editable text in PDFs)
+    plt.rcParams.update(
+        {"font.family": "sans-serif", "font.sans-serif": ["Arial"], "font.size": 25}
+    )
+
     if not isPositional or positional2D:
         raise ValueError("positional_entexit requires 2D positional (XY or RZ) data.")
 
