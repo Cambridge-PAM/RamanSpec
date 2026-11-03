@@ -4,6 +4,7 @@ import os
 import subprocess
 import re
 import sys
+import textwrap
 
 # Add parent directory to path so src module can be imported
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -634,6 +635,8 @@ elif analysis_type == "positional_entexit":
         def emit(
             map_ent, map_exit, title, label, plot_type, vmin=None, vmax=None, pdf=False
         ):
+            # Fixed-size figures at a large font need wrapped titles to avoid clipping
+            title = textwrap.fill(title, 30)
             fig = plot_split_map(
                 map_ent,
                 map_exit,
@@ -673,7 +676,7 @@ elif analysis_type == "positional_entexit":
             lim = float(np.max(np.abs(finite)))
             fig_diff = plot_map(
                 diff,
-                title=f"{title} — Difference ({exit_name} − {ent_name})",
+                title=f"{title}\nDifference ({exit_name} − {ent_name})",
                 label=f"{label} ({exit_name} − {ent_name})",
                 cmap=diff_cmap,
                 plotmode="pixel",
