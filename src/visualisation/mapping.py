@@ -457,8 +457,14 @@ def plot_split_map(
         extent=(-0.5, nx - 0.5, ny - 0.5, -0.5),
     )
     plt.colorbar(im, ax=ax, label=label)
-    # Dividing line runs top-left to bottom-right, matching the triangle mask
-    ax.plot([-0.5, nx - 0.5], [-0.5, ny - 0.5], color="k", linewidth=0.8)
+    # White gap along the top-left to bottom-right diagonal separating the triangles
+    ax.plot(
+        [-0.5, nx - 0.5],
+        [-0.5, ny - 0.5],
+        color="white",
+        linewidth=10,
+        solid_capstyle="butt",
+    )
     label_style = dict(
         fontsize=plt.rcParams["font.size"] * 1.1,
         fontweight="bold",
