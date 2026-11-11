@@ -462,7 +462,7 @@ def plot_split_map(
         [-0.5, nx - 0.5],
         [-0.5, ny - 0.5],
         color="white",
-        linewidth=15,
+        linewidth=20,
         solid_capstyle="butt",
     )
     label_style = dict(
