@@ -103,6 +103,18 @@ map_limits_cfg = config.get("plotting", {}).get("map_limits", {})
 use_manual_map_limits = bool(map_limits_cfg.get("enabled", False))
 manual_intensity_limits = map_limits_cfg.get("intensity")
 manual_ratio_limits = map_limits_cfg.get("ratio")
+ratio_map_limits = config.get("plotting", {}).get("ratio_map_limits", {})
+
+
+def get_ratio_map_limits(ratio_pair):
+    ratio_key = f"{ratio_pair[0]:g}/{ratio_pair[1]:g}"
+    limits = ratio_map_limits.get(ratio_key)
+    if limits is not None:
+        return limits[0], limits[1]
+    if use_manual_map_limits and manual_ratio_limits is not None:
+        return manual_ratio_limits[0], manual_ratio_limits[1]
+    return None, None
+
 
 map_subset_cfg = config.get("plotting", {}).get("map_subset", {})
 use_map_subset = bool(map_subset_cfg.get("enabled", False))
@@ -475,10 +487,7 @@ elif analysis_type == "positional":
 
             print(f" [-] {sample_name}, {ratio_pair} → map points:", len(map_data))
 
-            ratio_vmin = None
-            ratio_vmax = None
-            if use_manual_map_limits and manual_ratio_limits is not None:
-                ratio_vmin, ratio_vmax = manual_ratio_limits
+            ratio_vmin, ratio_vmax = get_ratio_map_limits(ratio_pair)
 
             fig = plot_map(
                 map_data,
@@ -694,10 +703,8 @@ elif analysis_type == "positional_entexit":
                 )
 
         # Ratio maps
-        ratio_vmin = ratio_vmax = None
-        if use_manual_map_limits and manual_ratio_limits is not None:
-            ratio_vmin, ratio_vmax = manual_ratio_limits
         for ratio_pair in config["ratios"]:
+            ratio_vmin, ratio_vmax = get_ratio_map_limits(ratio_pair)
             maps = []
             for labels in (ent_labels, exit_labels):
                 m, coord = build_ratio_map_from_df(
