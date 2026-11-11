@@ -104,6 +104,7 @@ use_manual_map_limits = bool(map_limits_cfg.get("enabled", False))
 manual_intensity_limits = map_limits_cfg.get("intensity")
 manual_ratio_limits = map_limits_cfg.get("ratio")
 ratio_map_limits = config.get("plotting", {}).get("ratio_map_limits", {})
+ratio_multipliers = config.get("plotting", {}).get("ratio_multipliers", {})
 
 
 def get_ratio_map_limits(ratio_pair):
@@ -114,6 +115,18 @@ def get_ratio_map_limits(ratio_pair):
     if use_manual_map_limits and manual_ratio_limits is not None:
         return manual_ratio_limits[0], manual_ratio_limits[1]
     return None, None
+
+
+def get_ratio_multiplier(ratio_pair, sample_name):
+    ratio_key = f"{ratio_pair[0]:g}/{ratio_pair[1]:g}"
+    sample_base = re.split(r"_X|_R", sample_name)[0]
+    return ratio_multipliers.get(ratio_key, {}).get(sample_base, 1)
+
+
+def scale_ratio_map(map_data, ratio_pair, sample_name):
+    factor = get_ratio_multiplier(ratio_pair, sample_name)
+    if factor != 1 and map_data.size:
+        map_data[:, -1] *= factor
 
 
 map_subset_cfg = config.get("plotting", {}).get("map_subset", {})
@@ -338,6 +351,11 @@ df_ratios = compute_ratios(
         "intensity_threshold", 100
     ),  # Default threshold is 100
 )
+df_ratios["Ratio"] = df_ratios.apply(
+    lambda row: row["Ratio"]
+    * get_ratio_multiplier((row["Peak1"], row["Peak2"]), row["Sample"]),
+    axis=1,
+)
 
 # print("\n=== RATIOS ===")
 # print(df_ratios)
@@ -481,6 +499,7 @@ elif analysis_type == "positional":
                     "intensity_threshold", 100
                 ),  # Default threshold is 100
             )
+            scale_ratio_map(map_data, ratio_pair, sample_name)
             map_data = subset_map_data(
                 map_data, coord_type, use_map_subset, subset_first_n_points
             )
@@ -714,6 +733,7 @@ elif analysis_type == "positional_entexit":
                     df_spectrum=df,
                     intensity_threshold=threshold,
                 )
+                scale_ratio_map(m, ratio_pair, labels[0])
                 maps.append(m)
             emit(
                 *maps,

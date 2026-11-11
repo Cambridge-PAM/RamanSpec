@@ -94,6 +94,9 @@ All outputs go to `outputs/<experiment>/`. File names are
   exit map. Both halves share one colormap and one colour scale (the common
   min/max of the pair, or `plotting.ratio_map_limits` for a configured ratio;
   otherwise `plotting.map_limits.ratio` is used when enabled).
+- Configured `plotting.ratio_multipliers` scale matching sample ratios before
+  ratio plots and maps are generated; unconfigured samples and ratios are
+  unchanged.
 - **Difference map:** Exit − Ent per pixel, on a symmetric diverging scale
   centred on zero. Only pixels present in both maps are used.
 - **Figure style:** Arial, 22 pt. PDFs embed text as editable fonts (TrueType,
