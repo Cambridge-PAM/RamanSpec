@@ -39,7 +39,7 @@ def plot(
 
         ax.plot(x, y, label=sample, color=style["color"], linestyle=style["linestyle"])
 
-        if detect_peaks:
+        if detect_peaks and len(y) > 0:
             import numpy as np
 
             y_values = np.asarray(y, dtype=float)

@@ -70,8 +70,10 @@ rename = input_config.get("rename")
 
 # Several indices: analyse each file in turn as a separate run (child process per file)
 _job = os.environ.get("RAMANSPEC_JOB")
+_job_index = None
 if _job is not None:
     _idx, _, _name = _job.partition("|")
+    _job_index = _idx
     indices = [int(_idx)]
     rename = [_name] if _name else None
 else:
@@ -93,6 +95,9 @@ else:
                 check=True,
             )
         sys.exit(0)
+
+input_config["indices"] = indices
+input_config["rename"] = rename
 
 experiment_name = Path(data_folder).name
 analysis_type = config["analysistype"]
@@ -200,7 +205,11 @@ df = load_files(data_folder, indices, rename)
 isPositional = any(col in df.columns for col in ["X_um", "Y_um", "R_um", "Z_um"])
 
 crop_cfg = config.get("processing", {}).get("crop_edge_pixels", {})
-if isPositional and crop_cfg.get("enabled", False):
+if (
+    isPositional
+    and analysis_type in {"positional", "positional_entexit"}
+    and crop_cfg.get("enabled", False)
+):
     crop_pixels = crop_cfg.get("pixels", 1)
     print(f"✂️  Cropping {crop_pixels} outer pixel(s) from positional map edges...")
     df = crop_map_edges(df, crop_pixels)
@@ -220,7 +229,12 @@ if analysis_type == "non-positional" and isPositional:
 # Label from the config renames (as applied), used on figures and in filenames
 _names = list(rename or [])
 rename_label = "_".join(re.sub(r'[<>:"/\\|?*\s]+', "-", str(n)) for n in _names)
-file_prefix = f"{experiment_name}_{rename_label}" if rename_label else experiment_name
+if rename_label:
+    file_prefix = f"{experiment_name}_{rename_label}"
+elif _job_index is not None:
+    file_prefix = f"{experiment_name}_file_{_job_index}"
+else:
+    file_prefix = experiment_name
 
 _save_plot = save_plot
 
@@ -525,7 +539,7 @@ elif analysis_type == "positional":
                     f"{sample_name}_ratio_map_{ratio_pair[0]}_{ratio_pair[1]}",
                     data=map_data_frame(
                         map_data,
-                        "Distance" if positional2D else coord_type,
+                        coord_type,
                         "Ratio",
                     ),
                 )
@@ -572,7 +586,7 @@ elif analysis_type == "positional":
                         f"{sample_name}_{mode}_map_{peak}",
                         data=map_data_frame(
                             map_data,
-                            "Distance" if positional2D else coord_type,
+                            coord_type,
                             mode,
                         ),
                     )
