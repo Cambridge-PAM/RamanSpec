@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def compute_ratios(df_peaks, ratio_pairs, df_spectrum, intensity_threshold=100):
     """
     Compute ratios of peak areas for given peak pairs, ensuring the total spectral integrated intensity is above a threshold.
@@ -16,7 +17,6 @@ def compute_ratios(df_peaks, ratio_pairs, df_spectrum, intensity_threshold=100):
     """
 
     results = []
-
 
     for sample, grp in df_peaks.groupby("Sample"):
         # Get the total integrated intensity for this sample
@@ -36,14 +36,22 @@ def compute_ratios(df_peaks, ratio_pairs, df_spectrum, intensity_threshold=100):
                     ratio = area1 / area2
                     if not np.isfinite(ratio) or abs(ratio) > 100:
                         ratio = 0.0
-        
-                results.append({
-                    "Sample": sample,
-                    "Peak1": p1,
-                    "Peak2": p2,
-                    "Ratio": float(np.nan_to_num(ratio, nan=0.0, posinf=0.0, neginf=0.0)),
-                    "Area1": float(np.nan_to_num(area1, nan=0.0, posinf=0.0, neginf=0.0)),
-                    "Area2": float(np.nan_to_num(area2, nan=0.0, posinf=0.0, neginf=0.0))
-                })
+
+                results.append(
+                    {
+                        "Sample": sample,
+                        "Peak1": p1,
+                        "Peak2": p2,
+                        "Ratio": float(
+                            np.nan_to_num(ratio, nan=0.0, posinf=0.0, neginf=0.0)
+                        ),
+                        "Area1": float(
+                            np.nan_to_num(area1, nan=0.0, posinf=0.0, neginf=0.0)
+                        ),
+                        "Area2": float(
+                            np.nan_to_num(area2, nan=0.0, posinf=0.0, neginf=0.0)
+                        ),
+                    }
+                )
 
     return pd.DataFrame(results)

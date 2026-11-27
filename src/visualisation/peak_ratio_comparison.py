@@ -4,7 +4,7 @@ from src.fitting.voigt import voigt
 from src.visualisation.style import build_style_map
 
 
-def plot_peak_ratio_comparison(fit_outputs, ratio_pairs, tolerance, style_map = None):
+def plot_peak_ratio_comparison(fit_outputs, ratio_pairs, tolerance, style_map=None):
     """
     Plot fitted peak shapes for ratio peaks across all samples.
 
@@ -34,7 +34,7 @@ def plot_peak_ratio_comparison(fit_outputs, ratio_pairs, tolerance, style_map = 
     # Create subplots
     # -----------------------
     n_peaks = len(peaks_to_plot)
-    fig, axes = plt.subplots(1, n_peaks, figsize=(5*n_peaks, 4), sharey=True)
+    fig, axes = plt.subplots(1, n_peaks, figsize=(5 * n_peaks, 4), sharey=True)
 
     if n_peaks == 1:
         axes = [axes]
@@ -57,15 +57,14 @@ def plot_peak_ratio_comparison(fit_outputs, ratio_pairs, tolerance, style_map = 
             # Find this peak in model
             for i, p in enumerate(peak_centers):
                 if abs(p - peak_target) <= tolerance:
-                    
 
-                    a, c, s, g = params[i*4:(i+1)*4]
+                    a, c, s, g = params[i * 4 : (i + 1) * 4]
 
                     y_peak = voigt(x_dense, a, c, s, g)
 
                     # Normalise for comparison
                     # y_peak = y_peak / np.max(y_peak)
-                    
+
                     style = style_map[sample]
 
                     ax.plot(
@@ -73,7 +72,7 @@ def plot_peak_ratio_comparison(fit_outputs, ratio_pairs, tolerance, style_map = 
                         y_peak,
                         color=style["color"],
                         linestyle=style["linestyle"],
-                        label=sample
+                        label=sample,
                     )
 
         ax.set_title(f"{peak_target} cm⁻¹")

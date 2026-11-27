@@ -1,7 +1,7 @@
-
 import re
 import matplotlib.cm as cm
 import numpy as np
+
 
 def parse_sample_name(name):
     """
@@ -21,6 +21,7 @@ def parse_sample_name(name):
 
     return prefix, number
 
+
 def build_style_map(samples):
     parsed = [parse_sample_name(s) for s in samples]
 
@@ -30,28 +31,24 @@ def build_style_map(samples):
     # -----------------------
     # COLOURS → numbers
     # -----------------------
-    cmap = cm.viridis(np.linspace(0, 1, len(samples)+1))
+    cmap = cm.viridis(np.linspace(0, 1, len(samples) + 1))
 
     number_color = dict(zip(samples, cmap))
 
     # -----------------------
     # MARKERS → prefixes
     # -----------------------
-    markers = ['o', '^', 's', 'D', 'v', '*']
+    markers = ["o", "^", "s", "D", "v", "*"]
 
-    prefix_marker = {
-        p: markers[i % len(markers)]
-        for i, p in enumerate(prefixes)
-    }
+    prefix_marker = {p: markers[i % len(markers)] for i, p in enumerate(prefixes)}
 
     # -----------------------
     # LINESTYLES → prefixes (optional)
     # -----------------------
-    linestyles = ['-', ':', '--', '-.']
+    linestyles = ["-", ":", "--", "-."]
 
     prefix_linestyle = {
-        p: linestyles[i % len(linestyles)]
-        for i, p in enumerate(prefixes)
+        p: linestyles[i % len(linestyles)] for i, p in enumerate(prefixes)
     }
 
     # -----------------------
@@ -66,8 +63,7 @@ def build_style_map(samples):
         style_map[s] = {
             "color": number_color[s],
             "marker": prefix_marker[prefix],
-            "linestyle": prefix_linestyle[prefix]
+            "linestyle": prefix_linestyle[prefix],
         }
 
     return style_map
-

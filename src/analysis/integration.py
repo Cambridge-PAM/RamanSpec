@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def integrate_region(df, region):
 
     results = []
@@ -8,8 +9,7 @@ def integrate_region(df, region):
 
         grp = grp.sort_values("RamanShift")
 
-        mask = (grp["RamanShift"] >= region[0]) & \
-               (grp["RamanShift"] <= region[1])
+        mask = (grp["RamanShift"] >= region[0]) & (grp["RamanShift"] <= region[1])
 
         x = grp["RamanShift"][mask]
         y = grp["Intensity"][mask]
